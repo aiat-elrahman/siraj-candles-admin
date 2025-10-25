@@ -28,6 +28,6 @@ module.exports = defineConfig({
       },
     },
     // --- OUTPUT LOCATION CONFIGURATION ---
-    outDir: '../siraj-frontend/assets',
+    outDir: '../siraj-candles-frontend/assets',
   }
 });

@@ -12,7 +12,7 @@ module.exports = defineConfig({
     // --- LIBRARY MODE CONFIGURATION ---
     lib: {
       // Use a direct relative path instead of path.resolve
-      entry: './src/assets/AdminProductUploader.jsx', // <-- THIS IS THE FIX
+      entry: './src/AdminProductUploader.jsx', // <-- THIS IS THE FIX
       
       name: 'AdminProductUploader',
       fileName: (format) => `admin-bundle.js`,

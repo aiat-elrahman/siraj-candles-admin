@@ -1,9 +1,8 @@
-// This is now a CommonJS file
-const path = require('path');
+
 const { defineConfig } = require('vite');
 const react = require('@vitejs/plugin-react');
 
-// This config tells Vite to build a reusable JS bundle (Library Mode)
+
 module.exports = defineConfig({
   plugins: [react()],
   define: {
@@ -12,8 +11,8 @@ module.exports = defineConfig({
   build: {
     // --- LIBRARY MODE CONFIGURATION ---
     lib: {
-      // '__dirname' is automatically available in CommonJS, so this just works
-      entry: path.resolve(__dirname, 'src/assets/AdminProductUploader.jsx'),
+      // Use a direct relative path instead of path.resolve
+      entry: 'src/assets/AdminProductUploader.jsx', // <-- THIS IS THE FIX
       
       name: 'AdminProductUploader',
       fileName: (format) => `admin-bundle.js`,

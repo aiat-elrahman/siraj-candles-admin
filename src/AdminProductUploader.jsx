@@ -11,7 +11,7 @@ const initialBundleItem = {
     allowedScents: ['Vanilla Cookie'],
 };
 
-// UPDATED initialProductState with ALL new fields
+// UPDATED initialProductState - removed duplicate fields
 const initialProductState = {
     _id: null,
     productType: 'Single',
@@ -47,7 +47,7 @@ const initialProductState = {
     featureBenefit: '',
     color: '',
     dimensions: '',
-    material: '',
+    // REMOVED: material (duplicate of typeOptions for Wax Burners)
     soapWeight: '',
     oilWeight: '',
     massageWeight: '',
@@ -57,7 +57,7 @@ const initialProductState = {
     scentOptions: [],
     sizeOptions: [],
     weightOptions: [],
-    typeOptions: [],
+    typeOptions: [], // Used for Wax Burners (Pottery, Glass, etc.)
     shapeOptions: [],
     keyIngredients: [],
 };
@@ -173,7 +173,7 @@ export const AdminProductUploader = () => {
         }));
     }, []);
 
-    // --- Bundle Item Handlers ---
+    // --- Bundle Item Handlers - FIXED ---
     const handleBundleItemChange = useCallback((index, field, value) => {
         setFormData(prev => {
             const newBundleItems = [...prev.bundleItems];
@@ -195,13 +195,15 @@ export const AdminProductUploader = () => {
     }, [formData.bundleItems.length]);
 
     const removeBundleItem = useCallback((index) => {
-        setFormData(prev => ({
-            ...prev,
-            bundleItems: prev.bundleItems.filter((_, i) => i !== index),
-        }));
-    }, []);
+        if (formData.bundleItems.length > 1) {
+            setFormData(prev => ({
+                ...prev,
+                bundleItems: prev.bundleItems.filter((_, i) => i !== index),
+            }));
+        }
+    }, [formData.bundleItems.length]);
 
-    // --- Main Submit Handler - UPDATED with all fields ---
+    // --- Main Submit Handler - UPDATED with field cleanup ---
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -246,7 +248,7 @@ export const AdminProductUploader = () => {
             featureBenefit: formData.featureBenefit,
             color: formData.color,
             dimensions: formData.dimensions,
-            material: formData.material,
+            // REMOVED: material
             soapWeight: formData.soapWeight,
             oilWeight: formData.oilWeight,
             massageWeight: formData.massageWeight,
@@ -268,20 +270,11 @@ export const AdminProductUploader = () => {
             // Clean up fields NOT relevant to the specific category
             const category = formData.category;
             
-            // Reset all optional fields first
-            const fieldsToReset = [
-                'burnTime', 'wickType', 'coverageSpace', 'weight', 'skinType', 
-                'featureBenefit', 'color', 'dimensions', 'material', 'soapWeight',
-                'oilWeight', 'massageWeight', 'fizzySpecs', 'scentOptions', 
-                'sizeOptions', 'weightOptions', 'typeOptions', 'shapeOptions', 
-                'keyIngredients', 'scents'
-            ];
-
             // Define which fields to keep for each category
             const categoryFields = {
                 'Candles': ['burnTime', 'wickType', 'coverageSpace', 'scents'],
                 'Pottery Collection': ['burnTime', 'wickType', 'coverageSpace', 'scentOptions'],
-                'Wax Burners': ['typeOptions', 'dimensions', 'material'],
+                'Wax Burners': ['typeOptions', 'dimensions'], // REMOVED: material
                 'Deodorant': ['scents', 'skinType', 'keyIngredients'],
                 'Soap': ['scents', 'soapWeight', 'featureBenefit', 'keyIngredients'],
                 'Body Splash': ['scents', 'sizeOptions'],
@@ -297,8 +290,11 @@ export const AdminProductUploader = () => {
 
             // Delete fields that aren't in the allowed list for this category
             const fieldsToKeep = categoryFields[category] || [];
-            fieldsToReset.forEach(field => {
-                if (!fieldsToKeep.includes(field)) {
+            const allFields = Object.keys(productDetails);
+            allFields.forEach(field => {
+                if (!['productType', 'category', 'price_egp', 'stock', 'status', 'featured', 
+                      'name_en', 'description_en', 'size', 'formattedDescription'].includes(field) && 
+                    !fieldsToKeep.includes(field)) {
                     delete productDetails[field];
                 }
             });
@@ -315,7 +311,7 @@ export const AdminProductUploader = () => {
                 'name_en', 'description_en', 'scents', 'size', 'formattedDescription',
                 'burnTime', 'wickType', 'coverageSpace', 'weight', 'skinType',
                 'featureBenefit', 'color', 'scentOptions', 'sizeOptions', 'weightOptions',
-                'typeOptions', 'shapeOptions', 'keyIngredients', 'dimensions', 'material',
+                'typeOptions', 'shapeOptions', 'keyIngredients', 'dimensions',
                 'soapWeight', 'oilWeight', 'massageWeight', 'fizzySpecs'
             ];
             singleProductFields.forEach(field => delete productDetails[field]);
@@ -468,6 +464,7 @@ export const AdminProductUploader = () => {
                         <div className="col-span-1">
                             <label htmlFor="scents" className="block text-sm font-medium text-gray-700 mb-1">Scent Name</label>
                             <input type="text" name="scents" id="scents" value={formData.scents.join(', ')} onChange={handleScentsChange} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., Vanilla"/>
+                            <p className="mt-1 text-xs text-gray-500">Note: Stock management per scent coming soon</p>
                         </div>
                     </>
                 );
@@ -490,7 +487,7 @@ export const AdminProductUploader = () => {
                         <div className="md:col-span-3">
                             <label htmlFor="scentOptions" className="block text-sm font-medium text-gray-700 mb-1">Scent Options (Comma separated)</label>
                             <input type="text" name="scentOptions" id="scentOptions" value={formData.scentOptions.join(', ')} onChange={(e) => handleArrayChange('scentOptions', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., Vanilla, Rose, Oud"/>
-                            <p className="mt-1 text-xs text-gray-500">These will appear as a dropdown menu for the customer.</p>
+                            <p className="mt-1 text-xs text-gray-500">These will appear as a dropdown menu for the customer. Stock management per scent coming soon</p>
                         </div>
                     </>
                 );
@@ -501,16 +498,13 @@ export const AdminProductUploader = () => {
                         <div className="md:col-span-3">
                             <label htmlFor="typeOptions" className="block text-sm font-medium text-gray-700 mb-1">Type Options (Comma separated)</label>
                             <input type="text" name="typeOptions" id="typeOptions" value={formData.typeOptions.join(', ')} onChange={(e) => handleArrayChange('typeOptions', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., Pottery, Glass"/>
-                            <p className="mt-1 text-xs text-gray-500">These will appear as a dropdown menu.</p>
+                            <p className="mt-1 text-xs text-gray-500">These will appear as a dropdown menu. Stock management per type coming soon</p>
                         </div>
                         <div>
                             <label htmlFor="dimensions" className="block text-sm font-medium text-gray-700 mb-1">Dimensions</label>
                             <input type="text" name="dimensions" id="dimensions" value={formData.dimensions} onChange={handleChange} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., 10x10x5 cm"/>
                         </div>
-                        <div>
-                            <label htmlFor="material" className="block text-sm font-medium text-gray-700 mb-1">Material</label>
-                            <input type="text" name="material" id="material" value={formData.material} onChange={handleChange} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., Ceramic, Glass"/>
-                        </div>
+                        {/* REMOVED: Material field (duplicate of type) */}
                     </>
                 );
 
@@ -528,6 +522,7 @@ export const AdminProductUploader = () => {
                         <div className="col-span-1">
                             <label htmlFor="keyIngredients" className="block text-sm font-medium text-gray-700 mb-1">Key Ingredients (Comma separated)</label>
                             <input type="text" name="keyIngredients" id="keyIngredients" value={formData.keyIngredients.join(', ')} onChange={(e) => handleArrayChange('keyIngredients', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., Vitamin E, Aloe Vera"/>
+                            <p className="mt-1 text-xs text-gray-500">Displayed as product information (not a dropdown)</p>
                         </div>
                     </>
                 );
@@ -550,6 +545,7 @@ export const AdminProductUploader = () => {
                         <div className="col-span-1">
                             <label htmlFor="keyIngredients" className="block text-sm font-medium text-gray-700 mb-1">Key Ingredients (Comma separated)</label>
                             <input type="text" name="keyIngredients" id="keyIngredients" value={formData.keyIngredients.join(', ')} onChange={(e) => handleArrayChange('keyIngredients', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., Shea Butter, Vitamin E"/>
+                            <p className="mt-1 text-xs text-gray-500">Displayed as product information (not a dropdown)</p>
                         </div>
                     </>
                 );
@@ -564,7 +560,7 @@ export const AdminProductUploader = () => {
                         <div className="md:col-span-2">
                             <label htmlFor="sizeOptions" className="block text-sm font-medium text-gray-700 mb-1">Size Options (Comma separated)</label>
                             <input type="text" name="sizeOptions" id="sizeOptions" value={formData.sizeOptions.join(', ')} onChange={(e) => handleArrayChange('sizeOptions', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., 50ml, 100ml, 200ml"/>
-                            <p className="mt-1 text-xs text-gray-500">These will appear as a dropdown menu.</p>
+                            <p className="mt-1 text-xs text-gray-500">These will appear as a dropdown menu. Stock management per size coming soon</p>
                         </div>
                     </>
                 );
@@ -602,6 +598,14 @@ export const AdminProductUploader = () => {
                 );
 
             case 'Fresheners':
+                return (
+                    <div className="md:col-span-3">
+                        <label htmlFor="scentOptions" className="block text-sm font-medium text-gray-700 mb-1">Scent Options (Comma separated)</label>
+                        <input type="text" name="scentOptions" id="scentOptions" value={formData.scentOptions.join(', ')} onChange={(e) => handleArrayChange('scentOptions', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., Vanilla, Rose, Oud"/>
+                        <p className="mt-1 text-xs text-gray-500">These will appear as a dropdown menu for the customer. Stock management per scent coming soon</p>
+                    </div>
+                );
+
             case 'Reed Diffusers':
                 return (
                     <div className="md:col-span-3">
@@ -633,7 +637,7 @@ export const AdminProductUploader = () => {
                         <div className="md:col-span-3">
                             <label htmlFor="shapeOptions" className="block text-sm font-medium text-gray-700 mb-1">Shape Options (Comma separated)</label>
                             <input type="text" name="shapeOptions" id="shapeOptions" value={formData.shapeOptions.join(', ')} onChange={(e) => handleArrayChange('shapeOptions', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., Round, Square, Heart, Star"/>
-                            <p className="mt-1 text-xs text-gray-500">These will appear as a dropdown menu.</p>
+                            <p className="mt-1 text-xs text-gray-500">These will appear as a dropdown menu. Stock management per shape coming soon</p>
                         </div>
                         <div className="md:col-span-3">
                             <label htmlFor="scentOptions" className="block text-sm font-medium text-gray-700 mb-1">Scent Options (Comma separated)</label>
@@ -680,7 +684,7 @@ export const AdminProductUploader = () => {
         }
     };
 
-    // --- FINAL JSX (Only showing the form section for brevity) ---
+    // --- FINAL JSX ---
     return (
         <div className="min-h-screen bg-gray-100 p-4 sm:p-8 font-sans">
             <div className="max-w-7xl mx-auto space-y-12">

@@ -13,7 +13,7 @@ const ShippingManager = () => {
 
     const fetchShippingRates = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/shipping`);
+            const response = await fetch(`${API_BASE_URL}/api/shipping-rates`);
             if (response.ok) {
                 const data = await response.json();
                 setShippingRates(data);

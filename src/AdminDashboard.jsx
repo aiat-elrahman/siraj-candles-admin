@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { Package, ShoppingCart, Truck, Tag, LifeBuoy, Grid, Menu, X } from 'lucide-react';
-
-// Import all the pages we'll create
 import ProductManager from './pages/ProductManager';
 import OrderManager from './pages/OrderManager';
 import ShippingManager from './pages/ShippingManager';

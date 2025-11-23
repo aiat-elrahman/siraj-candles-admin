@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { RefreshCw, Zap, Package, X, Plus, Edit, Trash2 } from 'lucide-react';
-import Cropper from 'react-easy-crop'; // NEW: Import Library
-import getCroppedImg from '../utils/cropUtils'; // NEW: Import Helper
+import Cropper from 'react-easy-crop'; 
+import getCroppedImg from '../utils/cropUtils'; 
 
+// CHANGE THIS TO YOUR LIVE URL WHEN DEPLOYING
 const API_BASE_URL = 'https://siraj-backend.onrender.com';
 
 const initialBundleItem = {
@@ -28,6 +29,7 @@ const initialProductState = {
     status: 'Active',
     featured: false,
     name_en: '',
+    description_en: '', // Description field
     scents: [],
     size: '',
     burnTime: '',
@@ -68,7 +70,7 @@ const ProductManager = () => {
     const [isLoadingData, setIsLoadingData] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
 
-    // --- NEW: CROPPER STATE ---
+    // --- CROPPER STATE ---
     const [cropImage, setCropImage] = useState(null);
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
@@ -94,7 +96,7 @@ const ProductManager = () => {
         fetchProducts().finally(() => setIsLoadingData(false));
     }, [fetchProducts]);
 
-    // --- NEW: CROPPER HELPER FUNCTIONS ---
+    // --- CROPPER HELPER FUNCTIONS ---
     const readFile = (file) => {
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -124,7 +126,6 @@ const ProductManager = () => {
                 };
             });
             
-            // Reset Cropper
             setIsCropping(false);
             setCropImage(null);
             setZoom(1);
@@ -134,14 +135,12 @@ const ProductManager = () => {
         }
     }, [cropImage, croppedAreaPixels]);
 
-    // Modified File Change Handler
     const handleFileChange = async (e) => {
         if (e.target.files && e.target.files.length > 0) {
             const file = e.target.files[0];
             const imageDataUrl = await readFile(file);
             setCropImage(imageDataUrl);
             setIsCropping(true);
-            // Reset input so the same file can be selected again if needed
             e.target.value = null;
         }
     };
@@ -191,7 +190,6 @@ const ProductManager = () => {
         });
     }, []);
 
-    // Standard removeFile (removes from selectedFiles array)
     const removeFile = useCallback((index) => {
         setFormData(prev => ({
             ...prev,
@@ -279,6 +277,9 @@ const ProductManager = () => {
             stock: formData.stock,
             status: formData.status,
             featured: formData.featured,
+            // Added Description
+            description_en: formData.description_en,
+            
             size: formData.size,
             burnTime: formData.burnTime,
             wickType: formData.wickType,
@@ -325,9 +326,11 @@ const ProductManager = () => {
 
             const fieldsToKeep = categoryFields[category] || [];
             const allFields = Object.keys(productDetails);
+            
+            // Added description_en to allowed fields
             allFields.forEach(field => {
                 if (!['productType', 'category', 'price_egp', 'stock', 'status', 'featured', 
-                      'name_en', 'size', 'variants'].includes(field) && 
+                      'name_en', 'description_en', 'size', 'variants'].includes(field) && 
                     !fieldsToKeep.includes(field)) {
                     delete productDetails[field];
                 }
@@ -834,6 +837,19 @@ const ProductManager = () => {
                                 <input type="text" name="size" id="size" value={formData.size} onChange={handleChange} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder='e.g., "200 gm", "Small"'/>
                             </div>
                         )}
+                        
+                        {/* NEW: General Description Field */}
+                        <div className="col-span-1 md:col-span-2 mt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Description (English)</label>
+                            <textarea
+                                name="description_en"
+                                value={formData.description_en}
+                                onChange={handleChange}
+                                rows="4"
+                                className="block w-full rounded-lg border p-3"
+                                placeholder="Write a detailed description here..."
+                            ></textarea>
+                        </div>
                     </fieldset>
 
                     {/* NEW: Variants Section */}

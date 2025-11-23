@@ -71,9 +71,10 @@ const CareManager = () => {
         setIsSubmitting(true);
 
         try {
-            const url = editingCare 
-                ? `${API_BASE_URL}/api/care-instructions/${editingCare._id}`
-                : `${API_BASE_URL}/api/care-instructions`;
+          
+const url = editingCare 
+    ? `${API_BASE_URL}/api/care/${editingCare._id}`
+    : `${API_BASE_URL}/api/care`;
             
             const method = editingCare ? 'PUT' : 'POST';
 
@@ -103,7 +104,7 @@ const CareManager = () => {
 
         setIsSubmitting(true);
         try {
-            const response = await fetch(`${API_BASE_URL}/api/care-instructions/${id}`, {
+            const response = await fetch(`${API_BASE_URL}/api/care/${id}`, {
                 method: 'DELETE'
             });
 

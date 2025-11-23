@@ -3,8 +3,7 @@ import { RefreshCw, Zap, Package, X, Plus, Edit, Trash2 } from 'lucide-react';
 import Cropper from 'react-easy-crop'; // NEW: Import Library
 import getCroppedImg from '../utils/cropUtils'; // NEW: Import Helper
 
-// Use localhost for testing, switch to 'https://siraj-backend.onrender.com' for live
-const API_BASE_URL = 'http://localhost:5000'; 
+const API_BASE_URL = 'https://siraj-backend.onrender.com';
 
 const initialBundleItem = {
     subProductName: 'Item',

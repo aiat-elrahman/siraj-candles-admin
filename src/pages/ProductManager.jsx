@@ -688,7 +688,8 @@ const ProductManager = () => {
             {/* --- NEW: CROPPER MODAL --- */}
             {isCropping && (
                 <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex flex-col items-center justify-center p-4">
-                    <div className="relative w-full max-w-lg h-96 bg-gray-900 rounded-lg overflow-hidden shadow-2xl">
+                    {/* Updated: Uses h-64 on mobile, h-96 on desktop */}
+<div class="relative w-full max-w-lg h-64 md:h-96 bg-gray-900 rounded-lg overflow-hidden shadow-2xl">
                         <Cropper
                             image={cropImage}
                             crop={crop}

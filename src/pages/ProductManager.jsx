@@ -196,7 +196,13 @@ const ProductManager = () => {
             selectedFiles: prev.selectedFiles.filter((_, i) => i !== index),
         }));
     }, []);
-
+const removeExistingImage = useCallback((index) => {
+    setFormData(prev => ({
+        ...prev,
+        // Remove the URL from the list of kept images
+        imagePaths: prev.imagePaths.filter((_, i) => i !== index),
+    }));
+}, []);
     const handleBundleItemChange = useCallback((index, field, value) => {
         setFormData(prev => {
             const newBundleItems = [...prev.bundleItems];
@@ -968,23 +974,37 @@ const ProductManager = () => {
                         </label>
 
                         <div className="mt-4 flex flex-wrap gap-4">
-                            {/* Existing Images */}
-                            {formData.imagePaths?.map((url, i) => (
-                                <div key={`existing-${i}`} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-300 opacity-80">
-                                    <img src={url} className="w-full h-full object-cover"/>
-                                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs text-center p-1">Existing</div>
-                                </div>
-                            ))}
-                            
-                            {/* New Cropped Images */}
-                            {formData.selectedFiles.map((file, i) => (
-                                <div key={`new-${i}`} className="relative group w-24 h-24 rounded-lg overflow-hidden border-2 border-green-500">
-                                    <img src={URL.createObjectURL(file)} className="w-full h-full object-cover"/>
-                                    <button type="button" onClick={() => removeFile(i)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600">
-                                        <X size={12} />
-                                    </button>
-                                </div>
-                            ))}
+                            {/* Existing Images Section */}
+{formData.imagePaths?.map((url, i) => (
+    <div key={`existing-${i}`} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-300">
+        <img src={url} className="w-full h-full object-cover" alt="Product" />
+        
+        {/* Badge showing if it's the Main Image or just an extra */}
+        <div className={`absolute bottom-0 left-0 right-0 text-white text-xs text-center p-1 ${i === 0 ? 'bg-indigo-600' : 'bg-black bg-opacity-50'}`}>
+            {i === 0 ? "Main Photo" : "Existing"}
+        </div>
+
+        {/* --- NEW DELETE BUTTON FOR EXISTING IMAGES --- */}
+        <button 
+            type="button" 
+            onClick={() => removeExistingImage(i)} 
+            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors"
+            title="Delete this image"
+        >
+            <X size={12} />
+        </button>
+    </div>
+))}
+
+{/* New Cropped Images */}
+{formData.selectedFiles.map((file, i) => (
+    <div key={`new-${i}`} className="relative group w-24 h-24 rounded-lg overflow-hidden border-2 border-green-500">
+        <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" alt="New Upload" />
+        <button type="button" onClick={() => removeFile(i)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600">
+            <X size={12} />
+        </button>
+    </div>
+))}
                         </div>
                         <p className="mt-2 text-xs text-gray-500">Images are forced to 4:5 ratio for perfect display.</p>
                     </fieldset>

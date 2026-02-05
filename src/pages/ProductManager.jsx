@@ -3,7 +3,7 @@ import { RefreshCw, Zap, Package, X, Plus, Edit, Trash2 } from 'lucide-react';
 import Cropper from 'react-easy-crop'; 
 import getCroppedImg from '../utils/cropUtils'; 
 
-// CHANGE THIS TO YOUR LIVE URL WHEN DEPLOYING
+// live url
 const API_BASE_URL = 'https://siraj-backend.onrender.com';
 
 const initialBundleItem = {

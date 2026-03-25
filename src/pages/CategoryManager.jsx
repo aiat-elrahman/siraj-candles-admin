@@ -10,9 +10,11 @@ const CategoryManager = () => {
     const [message, setMessage] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
+    const [uploadingImage, setUploadingImage] = useState(false);
     
     const [formData, setFormData] = useState({
         name: '',
+        image: '',
         sortOrder: 0
     });
 
@@ -21,7 +23,6 @@ const CategoryManager = () => {
             const response = await fetch(`${API_BASE_URL}/api/categories`);
             if (response.ok) {
                 const data = await response.json();
-                // Sort by sortOrder
                 const sortedCategories = data.sort((a, b) => a.sortOrder - b.sortOrder);
                 setCategories(sortedCategories);
             } else {
@@ -42,10 +43,36 @@ const CategoryManager = () => {
     const resetForm = () => {
         setFormData({
             name: '',
+            image: '',
             sortOrder: categories.length > 0 ? Math.max(...categories.map(c => c.sortOrder)) + 1 : 0
         });
         setEditingCategory(null);
         setShowForm(false);
+    };
+
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        setUploadingImage(true);
+        const formDataImg = new FormData();
+        formDataImg.append('image', file);
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/upload`, {
+                method: 'POST',
+                body: formDataImg
+            });
+            const data = await response.json();
+            setFormData(prev => ({ ...prev, image: data.imageUrl }));
+            setMessage('Image uploaded successfully!');
+            setTimeout(() => setMessage(''), 3000);
+        } catch (error) {
+            setMessage('Error uploading image');
+            console.error(error);
+        } finally {
+            setUploadingImage(false);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -74,6 +101,7 @@ const CategoryManager = () => {
                 setMessage(editingCategory ? 'Category updated successfully' : 'Category created successfully');
                 resetForm();
                 await fetchCategories();
+                setTimeout(() => setMessage(''), 3000);
             } else {
                 const error = await response.json();
                 setMessage(error.message || 'Error saving category');
@@ -97,6 +125,7 @@ const CategoryManager = () => {
             if (response.ok) {
                 setMessage('Category deleted successfully');
                 await fetchCategories();
+                setTimeout(() => setMessage(''), 3000);
             } else {
                 const error = await response.json();
                 setMessage(error.message || 'Error deleting category');
@@ -111,6 +140,7 @@ const CategoryManager = () => {
     const handleEdit = (category) => {
         setFormData({
             name: category.name,
+            image: category.image || '',
             sortOrder: category.sortOrder
         });
         setEditingCategory(category);
@@ -132,7 +162,6 @@ const CategoryManager = () => {
             return;
         }
 
-        // Swap sort orders
         const newCategories = [...categories];
         const tempOrder = newCategories[currentIndex].sortOrder;
         newCategories[currentIndex].sortOrder = newCategories[newIndex].sortOrder;
@@ -140,7 +169,6 @@ const CategoryManager = () => {
 
         setCategories(newCategories.sort((a, b) => a.sortOrder - b.sortOrder));
 
-        // Update both categories in backend
         try {
             await Promise.all([
                 fetch(`${API_BASE_URL}/api/categories/${categoryId}`, {
@@ -157,6 +185,7 @@ const CategoryManager = () => {
             
             setMessage('Category order updated successfully');
             await fetchCategories();
+            setTimeout(() => setMessage(''), 3000);
         } catch (error) {
             setMessage('Error updating category order');
             console.error('Error:', error);
@@ -217,6 +246,46 @@ const CategoryManager = () => {
                                     <p className="text-xs text-gray-500 mt-1">Lower numbers appear first</p>
                                 </div>
                             </div>
+
+                            {/* Image Upload Field */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Category Image</label>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageUpload}
+                                        className="hidden"
+                                        id="category-image-upload"
+                                    />
+                                    <label
+                                        htmlFor="category-image-upload"
+                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer transition flex items-center gap-2 border"
+                                    >
+                                        {uploadingImage ? 'Uploading...' : 'Upload Image'}
+                                    </label>
+                                    {formData.image && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, image: '' })}
+                                            className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                                        >
+                                            Remove
+                                        </button>
+                                    )}
+                                </div>
+                                {formData.image && (
+                                    <div className="mt-2">
+                                        <img 
+                                            src={formData.image} 
+                                            alt="Category preview" 
+                                            className="w-20 h-20 object-cover rounded-lg border"
+                                        />
+                                    </div>
+                                )}
+                                <p className="text-xs text-gray-500 mt-1">Upload a square image for the category (recommended: 400x400px)</p>
+                            </div>
+
                             <div className="flex space-x-4 pt-4">
                                 <button
                                     type="submit"
@@ -252,6 +321,7 @@ const CategoryManager = () => {
                             <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                                 <tr>
                                     <th className="px-4 py-3">Order</th>
+                                    <th className="px-4 py-3">Image</th>
                                     <th className="px-4 py-3">Category Name</th>
                                     <th className="px-4 py-3">Sort Order</th>
                                     <th className="px-4 py-3">Actions</th>
@@ -282,6 +352,19 @@ const CategoryManager = () => {
                                                     </button>
                                                 </div>
                                             </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {category.image ? (
+                                                <img 
+                                                    src={category.image} 
+                                                    alt={category.name} 
+                                                    className="w-10 h-10 object-cover rounded-lg border"
+                                                />
+                                            ) : (
+                                                <div className="w-10 h-10 bg-gray-100 rounded-lg border flex items-center justify-center text-gray-400 text-xs">
+                                                    No img
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 font-medium text-gray-900">{category.name}</td>
                                         <td className="px-4 py-3">{category.sortOrder}</td>

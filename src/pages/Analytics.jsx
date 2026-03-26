@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, ShoppingBag, Users, DollarSign, Eye, ShoppingCart, CheckCircle } from 'lucide-react';
+import { TrendingUp, ShoppingBag, Users, DollarSign, Eye, ShoppingCart, CheckCircle, Package } from 'lucide-react';
 
 const Analytics = () => {
   const [stats, setStats] = useState({

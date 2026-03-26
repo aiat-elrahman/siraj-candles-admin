@@ -469,18 +469,7 @@ const DiscountManager = () => {
                 )}
             </div>
 
-            {/* ── CHEAT SHEET ──────────────────────────────────────────────── */}
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
-                <h4 className="font-semibold text-amber-800 mb-3">💡 Discount Recipe Ideas for Siraj Candles</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-amber-700">
-                    <div><strong>CANDLES20</strong> — 20% off, Candles category only</div>
-                    <div><strong>FREESHIP</strong> — Free shipping, min order 3000 EGP</div>
-                    <div><strong>WELCOME10</strong> — 10% off entire cart, 1 use per campaign</div>
-                    <div><strong>EID50</strong> — 50 EGP off, expires after holiday</div>
-                    <div><strong>BUNDLE15</strong> — 15% off, Bundles category only</div>
-                    <div><strong>SOAP30</strong> — 30% off, Soap + Body Splash categories</div>
-                </div>
-            </div>
+           
         </div>
     );
 };

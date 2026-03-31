@@ -25,6 +25,7 @@ const initialProductState = {
     _id: null,
     productType: 'Single',
     category: '',
+    subcategory: '',
     price_egp: 0,
     stock: 0,
     status: 'Active',
@@ -74,7 +75,7 @@ const ProductManager = () => {
 
     // ── Dynamic Categories ──────────────────────────────────────────────────
     const [categories, setCategories] = useState([]);
-
+    const [subcategories, setSubcategories] = useState([]);
     // ── Product Search for Bundle Linking ───────────────────────────────────
     const [productSearch, setProductSearch] = useState({});   // { slotIndex: searchText }
     const [searchResults, setSearchResults] = useState({});   // { slotIndex: [products] }
@@ -117,7 +118,23 @@ const ProductManager = () => {
         setIsLoadingData(true);
         Promise.all([fetchProducts(), fetchCategories()]).finally(() => setIsLoadingData(false));
     }, [fetchProducts, fetchCategories]);
-
+// Add this effect to load subcategories when category changes
+useEffect(() => {
+    if (formData.category) {
+        const selectedCat = categories.find(c => c.name === formData.category);
+        if (selectedCat && selectedCat.subcategories) {
+            // Handle both string and object formats
+            const subs = selectedCat.subcategories.map(sub => 
+                typeof sub === 'string' ? sub : sub.name
+            );
+            setSubcategories(subs);
+        } else {
+            setSubcategories([]);
+        }
+    } else {
+        setSubcategories([]);
+    }
+}, [formData.category, categories]);
     // ── Bundle original price auto-calc ──────────────────────────────────────
     const bundleOriginalPrice = formData.bundleItems.reduce((sum, item) => {
         const linked = products.find(p => p._id === item.linkedProductId);
@@ -320,6 +337,7 @@ const ProductManager = () => {
         let productDetails = {
             productType: formData.productType,
             category: formData.category,
+            subcategory: formData.subcategory,
             price_egp: formData.price_egp,
             stock: formData.stock,
             status: formData.status,
@@ -416,6 +434,7 @@ const ProductManager = () => {
             ...initialProductState,
             ...processed,
             _id: p._id,
+            subcategory: p.subcategory || '',  
             bundleItems: bundleItemsFormatted.length > 0 ? bundleItemsFormatted : initialProductState.bundleItems,
             selectedFiles: [],
             imagePaths: p.imagePaths || [],

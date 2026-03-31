@@ -605,7 +605,31 @@ useEffect(() => {
                                 <option value="Inactive">Inactive (Hidden from site)</option>
                             </select>
                         </div>
-
+                         {/* Subcategory Dropdown - ADD THIS */}
+                          <div className="col-span-1">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Subcategory <span className="text-gray-400 text-xs">(optional)</span>
+                                 </label>
+                                      <select 
+                               name="subcategory" 
+                   value={formData.subcategory || ''} 
+                  onChange={handleChange}
+                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border bg-white"
+                         disabled={subcategories.length === 0}
+                             >
+        <option value="">-- Select Subcategory --</option>
+        {subcategories.map((sub, idx) => (
+            <option key={idx} value={sub}>
+                {sub}
+            </option>
+        ))}
+    </select>
+    {subcategories.length === 0 && formData.category && (
+        <p className="text-xs text-amber-600 mt-1">
+            No subcategories for "{formData.category}". Add them in Categories tab.
+        </p>
+    )}
+</div>
                         {/* Price — different for bundle vs single */}
                         {isBundle ? (
                             <div className="md:col-span-2">

@@ -1,16 +1,78 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { RefreshCw, Zap, Package, X, Plus, Edit, Trash2, Link, Search } from 'lucide-react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { RefreshCw, Zap, Package, X, Plus, Edit, Trash2, Link, Search, Bold, Italic, List, ListOrdered, Heading1, Heading2, Minus } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/cropUtils';
 
 const API_BASE_URL = 'https://siraj-backend.onrender.com';
 
+// ── Rich Text Editor Component ──────────────────────────────────────────────
+const RichTextEditor = ({ value, onChange, placeholder = '' }) => {
+    const editorRef = useRef(null);
+    const isInternalUpdate = useRef(false);
+
+    useEffect(() => {
+        if (editorRef.current && !isInternalUpdate.current) {
+            editorRef.current.innerHTML = value || '';
+        }
+    }, [value]);
+
+    const exec = (command, val = null) => {
+        editorRef.current?.focus();
+        document.execCommand(command, false, val);
+        emitChange();
+    };
+
+    const emitChange = useCallback(() => {
+        isInternalUpdate.current = true;
+        onChange(editorRef.current?.innerHTML || '');
+        setTimeout(() => { isInternalUpdate.current = false; }, 0);
+    }, [onChange]);
+
+    const insertHeading = (tag) => {
+        editorRef.current?.focus();
+        document.execCommand('formatBlock', false, tag);
+        emitChange();
+    };
+
+    const toolbarBtn = (onClick, icon, title) => (
+        <button type="button" title={title} onClick={onClick} className="p-1.5 rounded hover:bg-gray-200 transition-colors">
+            {icon}
+        </button>
+    );
+
+    return (
+        <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500">
+            <div className="flex flex-wrap items-center gap-1 px-3 py-2 bg-gray-50 border-b border-gray-200">
+                {toolbarBtn(() => insertHeading('h2'), <Heading1 size={16} />, 'Heading 1')}
+                {toolbarBtn(() => insertHeading('h3'), <Heading2 size={16} />, 'Heading 2')}
+                <div className="w-px h-5 bg-gray-300 mx-1" />
+                {toolbarBtn(() => exec('bold'), <Bold size={16} />, 'Bold')}
+                {toolbarBtn(() => exec('italic'), <Italic size={16} />, 'Italic')}
+                <div className="w-px h-5 bg-gray-300 mx-1" />
+                {toolbarBtn(() => exec('insertUnorderedList'), <List size={16} />, 'Bullet List')}
+                {toolbarBtn(() => exec('insertOrderedList'), <ListOrdered size={16} />, 'Numbered List')}
+                <div className="w-px h-5 bg-gray-300 mx-1" />
+                {toolbarBtn(() => exec('insertHorizontalRule'), <Minus size={16} />, 'Divider')}
+            </div>
+            <div
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                onInput={emitChange}
+                className="min-h-[150px] p-3 outline-none text-gray-800 text-sm leading-relaxed"
+                style={{ whiteSpace: 'pre-wrap' }}
+            />
+            {placeholder && <div className="px-3 py-1.5 bg-gray-50 border-t border-gray-100 text-xs text-gray-400">{placeholder}</div>}
+        </div>
+    );
+};
+
 const initialBundleItem = {
     subProductName: 'Item',
     size: '',
     allowedScents: ['Vanilla Cookie'],
-    linkedProductId: null,      // ← NEW: links to a real product
-    linkedProductName: '',      // ← NEW: display name of linked product
+    linkedProductId: null,
+    linkedProductName: '',
 };
 
 const initialVariant = {
@@ -39,7 +101,7 @@ const initialProductState = {
     coverageSpace: '',
     bundleName: '',
     bundleDescription: '',
-    bundlePrice: 0,         // ← NEW: manually set final bundle price
+    bundlePrice: 0,
     bundleItems: [
         { ...initialBundleItem, subProductName: 'Item 1' },
         { ...initialBundleItem, subProductName: 'Item 2' },
@@ -72,23 +134,17 @@ const ProductManager = () => {
     const [products, setProducts] = useState([]);
     const [isLoadingData, setIsLoadingData] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
-
-    // ── Dynamic Categories ──────────────────────────────────────────────────
     const [categories, setCategories] = useState([]);
     const [subcategories, setSubcategories] = useState([]);
-    // ── Product Search for Bundle Linking ───────────────────────────────────
-    const [productSearch, setProductSearch] = useState({});   // { slotIndex: searchText }
-    const [searchResults, setSearchResults] = useState({});   // { slotIndex: [products] }
+    const [productSearch, setProductSearch] = useState({});
+    const [searchResults, setSearchResults] = useState({});
     const [searchLoading, setSearchLoading] = useState({});
-
-    // ── Cropper ─────────────────────────────────────────────────────────────
     const [cropImage, setCropImage] = useState(null);
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
     const [isCropping, setIsCropping] = useState(false);
 
-    // ── Fetch categories dynamically ─────────────────────────────────────────
     const fetchCategories = useCallback(async () => {
         try {
             const res = await fetch(`${API_BASE_URL}/api/categories`);
@@ -118,24 +174,21 @@ const ProductManager = () => {
         setIsLoadingData(true);
         Promise.all([fetchProducts(), fetchCategories()]).finally(() => setIsLoadingData(false));
     }, [fetchProducts, fetchCategories]);
-// Add this effect to load subcategories when category changes
-useEffect(() => {
-    if (formData.category) {
-        const selectedCat = categories.find(c => c.name === formData.category);
-        if (selectedCat && selectedCat.subcategories) {
-            // Handle both string and object formats
-            const subs = selectedCat.subcategories.map(sub => 
-                typeof sub === 'string' ? sub : sub.name
-            );
-            setSubcategories(subs);
+
+    useEffect(() => {
+        if (formData.category) {
+            const selectedCat = categories.find(c => c.name === formData.category);
+            if (selectedCat && selectedCat.subcategories) {
+                const subs = selectedCat.subcategories.map(sub => typeof sub === 'string' ? sub : sub.name);
+                setSubcategories(subs);
+            } else {
+                setSubcategories([]);
+            }
         } else {
             setSubcategories([]);
         }
-    } else {
-        setSubcategories([]);
-    }
-}, [formData.category, categories]);
-    // ── Bundle original price auto-calc ──────────────────────────────────────
+    }, [formData.category, categories]);
+
     const bundleOriginalPrice = formData.bundleItems.reduce((sum, item) => {
         const linked = products.find(p => p._id === item.linkedProductId);
         if (!linked) return sum;
@@ -153,7 +206,6 @@ useEffect(() => {
         ? Math.round((bundleSaving / bundleOriginalPrice) * 100)
         : 0;
 
-    // ── Cropper helpers ──────────────────────────────────────────────────────
     const readFile = (file) => new Promise(resolve => {
         const reader = new FileReader();
         reader.addEventListener('load', () => resolve(reader.result));
@@ -182,7 +234,6 @@ useEffect(() => {
         }
     };
 
-    // ── Form helpers ─────────────────────────────────────────────────────────
     const resetForm = useCallback(() => {
         setFormData(initialProductState);
         setIsEditing(false);
@@ -209,10 +260,6 @@ useEffect(() => {
         setFormData(prev => ({ ...prev, [fieldName]: value.split(',').map(s => s.trim()).filter(Boolean) }));
     }, []);
 
-    const handleScentsChange = useCallback((e) => {
-        setFormData(prev => ({ ...prev, scents: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }));
-    }, []);
-
     const removeFile = useCallback((i) => {
         setFormData(prev => ({ ...prev, selectedFiles: prev.selectedFiles.filter((_, idx) => idx !== i) }));
     }, []);
@@ -221,7 +268,6 @@ useEffect(() => {
         setFormData(prev => ({ ...prev, imagePaths: prev.imagePaths.filter((_, idx) => idx !== i) }));
     }, []);
 
-    // ── Bundle helpers ───────────────────────────────────────────────────────
     const handleBundleItemChange = useCallback((index, field, value) => {
         setFormData(prev => {
             const items = [...prev.bundleItems];
@@ -253,7 +299,6 @@ useEffect(() => {
         }
     }, [formData.bundleItems.length]);
 
-    // ── Bundle product search & link ─────────────────────────────────────────
     const handleProductSearch = async (slotIndex, query) => {
         setProductSearch(prev => ({ ...prev, [slotIndex]: query }));
         if (!query || query.length < 2) {
@@ -273,7 +318,6 @@ useEffect(() => {
     };
 
     const linkProductToSlot = (slotIndex, product) => {
-        // Auto-populate scents from the linked product's variants
         const scents = (product.variants || [])
             .filter(v => v.variantType === 'scent')
             .map(v => v.variantName);
@@ -305,7 +349,6 @@ useEffect(() => {
         });
     };
 
-    // ── Variants ─────────────────────────────────────────────────────────────
     const handleVariantChange = useCallback((index, field, value) => {
         setFormData(prev => {
             const v = [...prev.variants];
@@ -322,7 +365,6 @@ useEffect(() => {
         setFormData(prev => ({ ...prev, variants: prev.variants.filter((_, idx) => idx !== i) }));
     }, []);
 
-    // ── Submit ───────────────────────────────────────────────────────────────
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true); setMessage('');
@@ -369,11 +411,10 @@ useEffect(() => {
         if (formData.productType === 'Single') {
             productDetails.name_en = formData.name_en;
         } else {
-            // Bundle
             productDetails.bundleName = formData.bundleName;
             productDetails.bundleDescription = formData.bundleDescription;
             productDetails.bundlePrice = parseFloat(formData.bundlePrice) || 0;
-            productDetails.bundleOriginalPrice = bundleOriginalPrice;  // auto-calc
+            productDetails.bundleOriginalPrice = bundleOriginalPrice;
             productDetails.bundleItems = formData.bundleItems.map(item => ({
                 subProductName: item.subProductName,
                 size: item.size,
@@ -383,7 +424,6 @@ useEffect(() => {
                 linkedProductId: item.linkedProductId || null,
                 linkedProductName: item.linkedProductName || '',
             }));
-            // Remove single-product-only fields
             ['name_en', 'scents', 'size', 'burnTime', 'wickType', 'coverageSpace',
              'weight', 'skinType', 'featureBenefit', 'color', 'scentOptions',
              'sizeOptions', 'weightOptions', 'typeOptions', 'shapeOptions',
@@ -415,7 +455,6 @@ useEffect(() => {
         }
     };
 
-    // ── Edit product ─────────────────────────────────────────────────────────
     const handleEditProduct = (p) => {
         const arrayFields = ['scents', 'scentOptions', 'sizeOptions', 'weightOptions', 'typeOptions', 'shapeOptions', 'keyIngredients'];
         const processed = { ...p };
@@ -434,7 +473,7 @@ useEffect(() => {
             ...initialProductState,
             ...processed,
             _id: p._id,
-            subcategory: p.subcategory || '',  
+            subcategory: p.subcategory || '',
             bundleItems: bundleItemsFormatted.length > 0 ? bundleItemsFormatted : initialProductState.bundleItems,
             selectedFiles: [],
             imagePaths: p.imagePaths || [],
@@ -467,7 +506,6 @@ useEffect(() => {
 
     const isBundle = formData.productType === 'Bundle';
 
-    // ── Category-specific fields (unchanged from original) ───────────────────
     const renderCategorySpecificFields = () => {
         const { category } = formData;
         if (isBundle || !category) return (
@@ -485,35 +523,13 @@ useEffect(() => {
                     <div><label className="block text-sm font-medium text-gray-700 mb-1">Coverage Space</label><input type="text" name="coverageSpace" value={formData.coverageSpace} onChange={handleChange} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., 15-20 m²"/></div>
                     <div className="md:col-span-3"><label className="block text-sm font-medium text-gray-700 mb-1">Scent Options (comma-separated)</label><input type="text" value={formData.scentOptions.join(', ')} onChange={e => handleArrayChange('scentOptions', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., Vanilla, Rose, Oud"/><p className="mt-1 text-xs text-gray-500">Customer chooses from these as a dropdown</p></div>
                 </>);
-            case 'Car Diffusers':
-            case 'Body Splash':
-            case 'Fresheners':
-            case 'Wax Melts':
-            case 'Reed Diffusers':
-                return (<>
-                    <div className="md:col-span-3"><label className="block text-sm font-medium text-gray-700 mb-1">Scent Options — with individual stock (use Variants below)</label><p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">💡 For per-scent stock tracking, add each scent as a Variant below with type "Scent" and its own stock number.</p></div>
-                    <div className="md:col-span-3"><label className="block text-sm font-medium text-gray-700 mb-1">Or: Simple Scent List (no individual stock)</label><input type="text" value={formData.scentOptions.join(', ')} onChange={e => handleArrayChange('scentOptions', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., Apple, Rose, Vanilla, Musk"/></div>
-                </>);
-            case 'Deodorant':
-                return (<>
-                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Skin Type</label><input type="text" name="skinType" value={formData.skinType} onChange={handleChange} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border"/></div>
-                    <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Key Ingredients</label><input type="text" value={formData.keyIngredients.join(', ')} onChange={e => handleArrayChange('keyIngredients', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border"/></div>
-                </>);
-            case 'Soap':
-                return (<>
-                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Soap Weight</label><input type="text" name="soapWeight" value={formData.soapWeight} onChange={handleChange} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border"/></div>
-                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Feature / Benefit</label><input type="text" name="featureBenefit" value={formData.featureBenefit} onChange={handleChange} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border"/></div>
-                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Key Ingredients</label><input type="text" value={formData.keyIngredients.join(', ')} onChange={e => handleArrayChange('keyIngredients', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border"/></div>
-                </>);
             default:
                 return (<div className="md:col-span-3"><label className="block text-sm font-medium text-gray-700 mb-1">Scent / Options (comma-separated)</label><input type="text" value={formData.scentOptions.join(', ')} onChange={e => handleArrayChange('scentOptions', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., Rose, Vanilla"/></div>);
         }
     };
 
-    // ─────────────────────────────────────────────────────────────────────────
     return (
         <div className="space-y-6">
-            {/* Cropper overlay */}
             {isCropping && (
                 <div className="fixed inset-0 z-50 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4">
                     <div className="relative w-full max-w-lg h-80 bg-gray-800 rounded-lg overflow-hidden">
@@ -552,7 +568,6 @@ useEffect(() => {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-8">
-                    {/* Product Type */}
                     <fieldset className="bg-indigo-50 p-4 rounded-xl border border-indigo-200">
                         <legend className="block text-lg font-semibold text-indigo-800 mb-3">
                             <Package className="w-5 h-5 inline mr-2 align-text-bottom"/> Product Type
@@ -567,11 +582,9 @@ useEffect(() => {
                         </div>
                     </fieldset>
 
-                    {/* General Details */}
                     <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 border-t pt-6">
                         <legend className="md:col-span-2 text-xl font-bold text-gray-800 mb-4">General Details</legend>
 
-                        {/* Name */}
                         <div className="col-span-1">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 {isBundle ? 'Bundle Name' : 'Name (English)'} <span className="text-red-500">*</span>
@@ -579,7 +592,6 @@ useEffect(() => {
                             <input type="text" name={isBundle ? 'bundleName' : 'name_en'} value={isBundle ? formData.bundleName : formData.name_en} onChange={handleChange} required className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border"/>
                         </div>
 
-                        {/* ── DYNAMIC CATEGORY DROPDOWN ── */}
                         <div className="col-span-1">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Category <span className="text-red-500">*</span></label>
                             <select name="category" value={formData.category} onChange={handleChange} required className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border bg-white">
@@ -588,9 +600,16 @@ useEffect(() => {
                                     <option key={cat._id} value={cat.name}>{cat.name}</option>
                                 ))}
                             </select>
-                            {categories.length === 0 && (
-                                <p className="text-xs text-amber-600 mt-1">⚠️ No categories loaded — check your Categories tab</p>
-                            )}
+                        </div>
+
+                        <div className="col-span-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory <span className="text-gray-400 text-xs">(optional)</span></label>
+                            <select name="subcategory" value={formData.subcategory || ''} onChange={handleChange} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border bg-white" disabled={subcategories.length === 0}>
+                                <option value="">-- Select Subcategory --</option>
+                                {subcategories.map((sub, idx) => (
+                                    <option key={idx} value={sub}>{sub}</option>
+                                ))}
+                            </select>
                         </div>
 
                         <div className="md:col-span-2 flex items-center gap-x-3 pt-1">
@@ -605,46 +624,19 @@ useEffect(() => {
                                 <option value="Inactive">Inactive (Hidden from site)</option>
                             </select>
                         </div>
-                         {/* Subcategory Dropdown - ADD THIS */}
-                          <div className="col-span-1">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Subcategory <span className="text-gray-400 text-xs">(optional)</span>
-                                 </label>
-                                      <select 
-                               name="subcategory" 
-                   value={formData.subcategory || ''} 
-                  onChange={handleChange}
-                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border bg-white"
-                         disabled={subcategories.length === 0}
-                             >
-        <option value="">-- Select Subcategory --</option>
-        {subcategories.map((sub, idx) => (
-            <option key={idx} value={sub}>
-                {sub}
-            </option>
-        ))}
-    </select>
-    {subcategories.length === 0 && formData.category && (
-        <p className="text-xs text-amber-600 mt-1">
-            No subcategories for "{formData.category}". Add them in Categories tab.
-        </p>
-    )}
-</div>
-                        {/* Price — different for bundle vs single */}
+
                         {isBundle ? (
                             <div className="md:col-span-2">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-yellow-50 rounded-xl border border-yellow-200">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Bundle Final Price (EGP) <span className="text-red-500">*</span></label>
                                         <input type="number" name="bundlePrice" value={formData.bundlePrice} onChange={e => setFormData(p => ({ ...p, bundlePrice: parseFloat(e.target.value) || 0 }))} required min="0" step="0.01" className="block w-full rounded-lg border-gray-300 shadow-sm p-3 border focus:border-indigo-500"/>
-                                        <p className="text-xs text-gray-500 mt-1">What customer pays</p>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Original Price (auto)</label>
                                         <div className="p-3 bg-white border rounded-lg text-gray-600 font-mono">
                                             {bundleOriginalPrice > 0 ? `${bundleOriginalPrice.toFixed(2)} EGP` : '— link products below'}
                                         </div>
-                                        <p className="text-xs text-gray-500 mt-1">Sum of component prices</p>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Customer Saves</label>
@@ -659,12 +651,10 @@ useEffect(() => {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Base Price (EGP) <span className="text-red-500">*</span></label>
                                     <input type="number" value={formData.price_egp} onChange={handlePriceChange} required min="0" step="0.01" className="block w-full rounded-lg border-gray-300 shadow-sm p-3 border focus:border-indigo-500"/>
-                                    <p className="text-xs text-gray-500 mt-1">Used if no variants are added</p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Base Stock <span className="text-red-500">*</span></label>
                                     <input type="number" value={formData.stock} onChange={handleStockChange} required min="0" className="block w-full rounded-lg border-gray-300 shadow-sm p-3 border focus:border-indigo-500"/>
-                                    <p className="text-xs text-gray-500 mt-1">Used if no variants are added</p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
@@ -674,18 +664,25 @@ useEffect(() => {
                         )}
 
                         <div className="col-span-1 md:col-span-2 mt-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                            <textarea name={isBundle ? 'bundleDescription' : 'description_en'} value={isBundle ? formData.bundleDescription : formData.description_en} onChange={handleChange} rows="3" className="block w-full rounded-lg border p-3 focus:border-indigo-500" placeholder="Write a description..."/>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Description (Rich Text)</label>
+                            <RichTextEditor
+                                key={isEditing ? formData._id : 'new-desc'}
+                                value={isBundle ? formData.bundleDescription : formData.description_en}
+                                onChange={(html) => setFormData(prev => ({
+                                    ...prev,
+                                    [isBundle ? 'bundleDescription' : 'description_en']: html
+                                }))}
+                                placeholder="Write your product description here. Use headings, bold text, and lists as needed."
+                            />
                         </div>
                     </fieldset>
 
-                    {/* Variants (single products only) */}
                     {!isBundle && (
                         <fieldset className="bg-green-50 p-6 rounded-xl border border-green-200 space-y-4">
                             <legend className="text-xl font-bold text-green-800 flex items-center">
                                 <Package className="w-5 h-5 mr-2"/> Product Variants & Stock per Scent
                             </legend>
-                            <p className="text-sm text-green-700">Add each scent/size/weight as a variant with its own price and stock. When a variant's stock = 0, it shows as Sold Out on the site.</p>
+                            <p className="text-sm text-green-700">Add each scent/size/weight as a variant with its own price and stock.</p>
                             {formData.variants.map((variant, index) => (
                                 <div key={index} className="p-4 border border-green-300 rounded-lg bg-white">
                                     <div className="flex justify-between items-center mb-3">
@@ -695,7 +692,7 @@ useEffect(() => {
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         <div>
                                             <label className="block text-xs font-medium text-gray-600 mb-1">Name (e.g. Apple, 100g)</label>
-                                            <input type="text" value={variant.variantName} onChange={e => handleVariantChange(index, 'variantName', e.target.value)} className="block w-full rounded-md border-gray-300 shadow-sm p-2 text-sm border focus:ring-indigo-500" placeholder="e.g., Apple"/>
+                                            <input type="text" value={variant.variantName} onChange={e => handleVariantChange(index, 'variantName', e.target.value)} className="block w-full rounded-md border-gray-300 shadow-sm p-2 text-sm border focus:ring-indigo-500"/>
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
@@ -713,7 +710,6 @@ useEffect(() => {
                                         <div>
                                             <label className="block text-xs font-medium text-gray-600 mb-1">Stock</label>
                                             <input type="number" value={variant.stock} onChange={e => handleVariantChange(index, 'stock', parseInt(e.target.value) || 0)} className={`block w-full rounded-md shadow-sm p-2 text-sm border ${variant.stock === 0 ? 'border-red-300 bg-red-50' : 'border-gray-300'}`} min="0"/>
-                                            {variant.stock === 0 && <p className="text-xs text-red-500 mt-1">Will show as Sold Out</p>}
                                         </div>
                                     </div>
                                 </div>
@@ -724,13 +720,11 @@ useEffect(() => {
                         </fieldset>
                     )}
 
-                    {/* Specifications */}
                     <fieldset className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 border-t pt-6">
                         <legend className="md:col-span-3 text-xl font-bold text-gray-800 mb-4">Product Specifications</legend>
                         {renderCategorySpecificFields()}
                     </fieldset>
 
-                    {/* Images */}
                     <fieldset className="border-t pt-6">
                         <legend className="text-xl font-bold text-gray-800 mb-4">Images (Max 5) {!isEditing && <span className="text-red-500 text-base">*</span>}</legend>
                         <input type="file" id="file-upload" accept="image/*" onChange={handleFileChange} className="hidden"/>
@@ -755,13 +749,12 @@ useEffect(() => {
                         <p className="mt-2 text-xs text-gray-500">Images forced to 4:5 ratio.</p>
                     </fieldset>
 
-                    {/* ── BUNDLE ITEMS — with product linking ── */}
                     {isBundle && (
                         <fieldset className="bg-yellow-50 p-6 rounded-xl border border-yellow-200 space-y-6">
                             <legend className="text-xl font-bold text-yellow-800 flex items-center">
                                 <Package className="w-5 h-5 mr-2"/> Bundle Items (Up to 10)
                             </legend>
-                            <p className="text-sm text-yellow-700">Link each slot to an existing product so stock is tracked automatically. Then customise the scent options the customer can choose from.</p>
+                            <p className="text-sm text-yellow-700">Link each slot to an existing product so stock is tracked automatically.</p>
 
                             {formData.bundleItems.map((item, index) => (
                                 <div key={index} className="p-4 border border-yellow-300 rounded-lg bg-white shadow-sm">
@@ -772,7 +765,6 @@ useEffect(() => {
                                         )}
                                     </div>
 
-                                    {/* Link to product */}
                                     <div className="mb-4 p-3 rounded-lg bg-indigo-50 border border-indigo-100">
                                         <label className="block text-xs font-semibold text-indigo-700 mb-2 flex items-center gap-1">
                                             <Link size={12}/> Link to Existing Product (for stock tracking)
@@ -810,12 +802,10 @@ useEffect(() => {
                                                         ))}
                                                     </div>
                                                 )}
-                                                <p className="text-xs text-gray-400 mt-1">Optional — link for stock tracking. Leave blank if not needed.</p>
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Existing fields unchanged */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div>
                                             <label className="block text-xs font-medium text-gray-600 mb-1">Display Name</label>
@@ -828,7 +818,6 @@ useEffect(() => {
                                         <div>
                                             <label className="block text-xs font-medium text-gray-600 mb-1">Allowed Options / Scents (comma separated)</label>
                                             <input type="text" value={item.allowedScents.join(', ')} onChange={e => handleBundleScentsChange(index, e.target.value)} className="block w-full rounded-md border-gray-300 shadow-sm p-2 text-sm border focus:ring-indigo-500" placeholder="e.g., Rose, Vanilla, Apple"/>
-                                            {item.linkedProductId && <p className="text-xs text-indigo-500 mt-1">Auto-filled from linked product. Edit if needed.</p>}
                                         </div>
                                     </div>
                                 </div>
@@ -842,7 +831,6 @@ useEffect(() => {
                         </fieldset>
                     )}
 
-                    {/* Submit */}
                     <div className="pt-6 border-t">
                         <button type="submit" disabled={isSubmitting} className="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl shadow-lg text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition">
                             {isSubmitting ? <><RefreshCw className="w-5 h-5 mr-3 animate-spin"/> Submitting...</> : (isEditing ? 'Update Product' : 'Submit Product / Bundle')}
@@ -851,7 +839,6 @@ useEffect(() => {
                 </form>
             </div>
 
-            {/* Product List */}
             {!isLoadingData && (
                 <div className="bg-white shadow-xl rounded-2xl p-6">
                     <h2 className="text-2xl font-bold text-gray-800 mb-6">Manage Products</h2>

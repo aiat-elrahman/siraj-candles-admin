@@ -376,11 +376,11 @@ const ProductManager = () => {
             setMessage('Error: Category is required.'); setIsSubmitting(false); return;
         }
 
-        let productDetails = {
+       let productDetails = {
             productType: formData.productType,
             category: formData.category,
             subcategory: formData.subcategory,
-            price_egp: formData.price_egp,
+            price_egp: formData.price_egp, // Base price for Single products
             stock: formData.stock,
             status: formData.status,
             featured: formData.featured,
@@ -411,10 +411,16 @@ const ProductManager = () => {
         if (formData.productType === 'Single') {
             productDetails.name_en = formData.name_en;
         } else {
+            // --- BUNDLE SPECIFIC LOGIC ---
             productDetails.bundleName = formData.bundleName;
             productDetails.bundleDescription = formData.bundleDescription;
             productDetails.bundlePrice = parseFloat(formData.bundlePrice) || 0;
             productDetails.bundleOriginalPrice = bundleOriginalPrice;
+
+            // ✅ CRITICAL FIX: Ensure backend receives a price and name to satisfy DB requirements
+            productDetails.price_egp = parseFloat(formData.bundlePrice) || 0; 
+            productDetails.name_en = formData.bundleName; 
+
             productDetails.bundleItems = formData.bundleItems.map(item => ({
                 subProductName: item.subProductName,
                 size: item.size,
@@ -424,13 +430,14 @@ const ProductManager = () => {
                 linkedProductId: item.linkedProductId || null,
                 linkedProductName: item.linkedProductName || '',
             }));
-            ['name_en', 'scents', 'size', 'burnTime', 'wickType', 'coverageSpace',
+
+            // Clean up fields that don't belong to a bundle, but DON'T delete the ones we just added
+            ['scents', 'size', 'burnTime', 'wickType', 'coverageSpace',
              'weight', 'skinType', 'featureBenefit', 'color', 'scentOptions',
              'sizeOptions', 'weightOptions', 'typeOptions', 'shapeOptions',
              'keyIngredients', 'dimensions', 'soapWeight', 'oilWeight',
              'massageWeight', 'fizzySpecs', 'variants'].forEach(f => delete productDetails[f]);
         }
-
         const data = new FormData();
         formData.selectedFiles.forEach(file => data.append('productImages', file));
         data.append('productData', JSON.stringify(productDetails));

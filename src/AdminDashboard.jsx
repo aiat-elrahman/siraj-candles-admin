@@ -12,7 +12,7 @@ import CareManager from './pages/CareManager';
 import CategoryManager from './pages/CategoryManager';
 import HeroManager from './pages/HeroManager';
 import Analytics from './pages/Analytics';
-
+import ReviewManager from './ReviewManager';
 // ── Design tokens matching the ERP ──────────────────────────────────────────
 const DARK    = '#1E1023';
 const PINK    = '#F472B6';
@@ -34,6 +34,8 @@ const NAV = [
   { id: 'shipping',   name: 'Shipping',        icon: Truck },
   { id: 'care',       name: 'Product Care',    icon: LifeBuoy },
   { id: 'hero',       name: 'Hero Section',    icon: Image },
+  { id: 'reviews', label: 'Reviews', icon: Star }
+
 ];
 
 // ── Inject shared admin CSS once ─────────────────────────────────────────────
@@ -328,6 +330,7 @@ const AdminDashboard = () => {
       case 'categories': return <CategoryManager />;
       case 'hero':       return <HeroManager />;
       case 'analytics':  return <Analytics />;
+      case 'reviews': return <ReviewManager />;
       default:           return <Analytics />;
     }
   };

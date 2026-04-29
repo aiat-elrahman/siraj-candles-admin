@@ -12,7 +12,7 @@ import CareManager from './pages/CareManager';
 import CategoryManager from './pages/CategoryManager';
 import HeroManager from './pages/HeroManager';
 import Analytics from './pages/Analytics';
-import ReviewManager from './ReviewManager';
+import ReviewManager from './pages/ReviewManager';
 // ── Design tokens matching the ERP ──────────────────────────────────────────
 const DARK    = '#1E1023';
 const PINK    = '#F472B6';

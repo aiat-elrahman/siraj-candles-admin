@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Package, ShoppingCart, Truck, Tag, LifeBuoy, Grid,
   Menu, X, LogOut, BarChart3, Image, Bell, Search,
-  ChevronRight, Home
+  ChevronRight, Home, Star
 } from 'lucide-react';
 import ProductManager from './pages/ProductManager';
 import OrderManager from './pages/OrderManager';
@@ -34,7 +34,8 @@ const NAV = [
   { id: 'shipping',   name: 'Shipping',        icon: Truck },
   { id: 'care',       name: 'Product Care',    icon: LifeBuoy },
   { id: 'hero',       name: 'Hero Section',    icon: Image },
-  { id: 'reviews', label: 'Reviews', icon: Star }
+  { id: 'reviews',    name: 'Reviews',         icon: Star },
+  
 
 ];
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Package, ShoppingCart, Truck, Tag, LifeBuoy, Grid,
   Menu, X, LogOut, BarChart3, Image, Bell, Search,
-  ChevronRight, Home, Star
+  ChevronRight, Home, Star , Upload
 } from 'lucide-react';
 import ProductManager from './pages/ProductManager';
 import OrderManager from './pages/OrderManager';
@@ -12,6 +12,7 @@ import CareManager from './pages/CareManager';
 import CategoryManager from './pages/CategoryManager';
 import HeroManager from './pages/HeroManager';
 import Analytics from './pages/Analytics';
+import BulkUploadManager from './pages/BulkUploadManager';
 import ReviewManager from './pages/ReviewManager';
 // ── Design tokens matching the ERP ──────────────────────────────────────────
 const DARK    = '#1E1023';
@@ -35,7 +36,7 @@ const NAV = [
   { id: 'care',       name: 'Product Care',    icon: LifeBuoy },
   { id: 'hero',       name: 'Hero Section',    icon: Image },
   { id: 'reviews',    name: 'Reviews',         icon: Star },
-  
+  { id: 'bulk',       name: 'Bulk Upload', icon: Upload }
 
 ];
 
@@ -233,11 +234,20 @@ const ADMIN_CSS = `
   }
 
   @media (max-width: 768px) {
-    .admin-sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+    .admin-sidebar { 
+        position: fixed;
+        left: 0; top: 0;
+        height: 100vh;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 200;
+        width: 240px;
+    }
     .admin-sidebar.mobile-open { transform: translateX(0); }
-    .admin-main { padding: 16px; }
+    .admin-main { padding: 16px; width: 100%; }
     .admin-header { padding: 0 16px; }
-  }
+    .admin-root { display: block; }
+}
 `;
 
 // ── Main component ───────────────────────────────────────────────────────────
@@ -332,6 +342,7 @@ const AdminDashboard = () => {
       case 'hero':       return <HeroManager />;
       case 'analytics':  return <Analytics />;
       case 'reviews': return <ReviewManager />;
+      case 'bulk': return <BulkUploadManager/>;
       default:           return <Analytics />;
     }
   };

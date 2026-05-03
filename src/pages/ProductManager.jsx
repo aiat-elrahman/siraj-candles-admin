@@ -438,9 +438,10 @@ const ProductManager = () => {
              'keyIngredients', 'dimensions', 'soapWeight', 'oilWeight',
              'massageWeight', 'fizzySpecs', 'variants'].forEach(f => delete productDetails[f]);
         }
-        const data = new FormData();
-        formData.selectedFiles.forEach(file => data.append('productImages', file));
-        data.append('productData', JSON.stringify(productDetails));
+        productDetails.existingImagePaths = formData.imagePaths || [];
+
+
+const { productType } = productData;
 
         const url = isEditing ? `${API_BASE_URL}/api/products/${formData._id}` : `${API_BASE_URL}/api/products`;
         const method = isEditing ? 'PUT' : 'POST';

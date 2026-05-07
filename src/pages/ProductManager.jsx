@@ -440,8 +440,9 @@ const ProductManager = () => {
         }
         productDetails.existingImagePaths = formData.imagePaths || [];
 
-
-const { productType } = productData;
+        const data = new FormData();
+        formData.selectedFiles.forEach(file => data.append('productImages', file));
+        data.append('productData', JSON.stringify(productDetails));
 
         const url = isEditing ? `${API_BASE_URL}/api/products/${formData._id}` : `${API_BASE_URL}/api/products`;
         const method = isEditing ? 'PUT' : 'POST';

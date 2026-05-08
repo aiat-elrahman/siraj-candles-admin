@@ -176,6 +176,7 @@ const OrderManager = () => {
       <div class="totals">
         <p><span>Subtotal:</span><span>${order.subtotal?.toFixed(2) || order.totalAmount?.toFixed(2)} EGP</span></p>
         <p><span>Shipping:</span><span>${order.shippingFee?.toFixed(2) || '0.00'} EGP</span></p>
+        ${order.discountAmount > 0 ? `<p style="color: #16a34a; font-weight: 600;"><span>Discount ${order.discountCode ? `(${order.discountCode})` : ''}:</span><span>-${order.discountAmount.toFixed(2)} EGP</span></p>` : ''}
         <p class="grand"><span>Total:</span><span>${order.totalAmount?.toFixed(2)} EGP</span></p>
       </div>
 
@@ -477,6 +478,15 @@ const OrderManager = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', color: MID, marginBottom: '8px' }}>
                 <span>Shipping</span><span>{viewingOrder.shippingFee?.toFixed(2) || '0.00'} EGP</span>
               </div>
+              
+              {/* NEW DISCOUNT ROW FOR MODAL */}
+              {viewingOrder.discountAmount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', color: '#16a34a', marginBottom: '8px', fontWeight: 600 }}>
+                  <span>Discount {viewingOrder.discountCode ? `(${viewingOrder.discountCode})` : ''}</span>
+                  <span>-{viewingOrder.discountAmount?.toFixed(2)} EGP</span>
+                </div>
+              )}
+
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', fontWeight: 700, color: DARK, borderTop: '1px solid #f9a8d4', paddingTop: '8px' }}>
                 <span>Total</span><span style={{ color: ROSE }}>{viewingOrder.totalAmount?.toFixed(2)} EGP</span>
               </div>

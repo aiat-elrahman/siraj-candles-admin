@@ -18,6 +18,17 @@ const MID   = '#6B4A6E';
 const PALE  = '#FFF0F6';
 const CREAM = '#FCE7F3';
 
+// Extracts scent/variant label from an item regardless of which field the backend uses
+const getItemVariant = (item) =>
+  item.variantName ||
+  item.variant ||
+  item.scent ||
+  item.selectedVariant ||
+  item.selectedScent ||
+  item.option ||
+  (item.options && (typeof item.options === 'string' ? item.options : Object.values(item.options).join(', '))) ||
+  null;
+
 const OrderManager = () => {
   const [orders, setOrders]           = useState([]);
   const [isLoading, setIsLoading]     = useState(true);
@@ -73,7 +84,10 @@ const OrderManager = () => {
   const openWhatsApp = (order) => {
     const phone = order.customerInfo?.phone?.replace(/\D/g, '');
     if (!phone) { alert('No phone number on this order.'); return; }
-    const itemsList = order.items?.map(i => `• ${i.name} x${i.quantity}`).join('\n') || '';
+    const itemsList = order.items?.map(i => {
+      const variant = getItemVariant(i);
+      return `• ${i.name}${variant ? ` (${variant})` : ''} x${i.quantity}`;
+    }).join('\n') || '';
     const msg = encodeURIComponent(
       `Hello ${order.customerInfo?.name}! 👋\n\nThank you for your order from Siraj Candles 🕯️\n\nOrder: #${order._id.slice(-8)}\n\nItems:\n${itemsList}\n\nTotal: ${order.totalAmount?.toFixed(2)} EGP\n\nStatus: ${order.status}\n\nPlease let us know if you have any questions! ❤️`
     );
@@ -82,14 +96,17 @@ const OrderManager = () => {
 
   const printInvoice = (order) => {
     const win = window.open('', '_blank');
-    const itemsHtml = order.items?.map(item => `
+    const itemsHtml = order.items?.map(item => {
+      const variant = getItemVariant(item);
+      return `
       <tr>
-        <td style="padding:8px 12px; border-bottom:1px solid #fce7f3;">${item.name}${item.variantName ? ` (${item.variantName})` : ''}</td>
+        <td style="padding:8px 12px; border-bottom:1px solid #fce7f3;">${item.name}${variant ? ` <span style="color:#8c7268;font-size:0.85em;">(${variant})</span>` : ''}</td>
         <td style="padding:8px 12px; border-bottom:1px solid #fce7f3; text-align:center;">${item.quantity}</td>
         <td style="padding:8px 12px; border-bottom:1px solid #fce7f3; text-align:right;">${item.price?.toFixed(2)} EGP</td>
         <td style="padding:8px 12px; border-bottom:1px solid #fce7f3; text-align:right;">${(item.price * item.quantity).toFixed(2)} EGP</td>
       </tr>
-    `).join('') || '';
+    `;
+    }).join('') || '';
 
     win.document.write(`
       <!DOCTYPE html><html><head>
@@ -182,7 +199,10 @@ const OrderManager = () => {
       o.customerInfo?.phone || '',
       o.customerInfo?.email || '',
       o.customerInfo?.city || '',
-      o.items?.map(i => `${i.name} x${i.quantity}`).join(' | ') || '',
+      o.items?.map(i => {
+        const variant = getItemVariant(i);
+        return `${i.name}${variant ? ` (${variant})` : ''} x${i.quantity}`;
+      }).join(' | ') || '',
       o.subtotal?.toFixed(2) || '',
       o.shippingFee?.toFixed(2) || '0.00',
       o.totalAmount?.toFixed(2) || '',
@@ -326,9 +346,14 @@ const OrderManager = () => {
                       <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{order.customerInfo?.phone || ''}</div>
                     </td>
                     <td style={s.td}>
-                      {order.items?.slice(0, 2).map((item, i) => (
-                        <div key={i} style={{ fontSize: '0.78rem' }}>{item.name} ×{item.quantity}</div>
-                      ))}
+                      {order.items?.slice(0, 2).map((item, i) => {
+                        const variant = getItemVariant(item);
+                        return (
+                          <div key={i} style={{ fontSize: '0.78rem' }}>
+                            {item.name}{variant && <span style={{ color: MID }}> · {variant}</span>} ×{item.quantity}
+                          </div>
+                        );
+                      })}
                       {order.items?.length > 2 && <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>+{order.items.length - 2} more</div>}
                     </td>
                     <td style={{ ...s.tdBold, color: ROSE }}>{order.totalAmount?.toFixed(2)} EGP</td>
@@ -426,19 +451,22 @@ const OrderManager = () => {
             {/* Items */}
             <div style={{ marginBottom: '16px' }}>
               <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: MID, marginBottom: '10px' }}>Items</div>
-              {viewingOrder.items?.map((item, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #fce7f3', fontSize: '0.88rem' }}>
-                  <div>
-                    <span style={{ fontWeight: 600, color: DARK }}>{item.name}</span>
-                    {item.variantName && <span style={{ color: MID, fontSize: '0.8rem' }}> · {item.variantName}</span>}
-                    {item.customization?.length > 0 && <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '2px' }}>{item.customization.join(', ')}</div>}
+              {viewingOrder.items?.map((item, i) => {
+                const variant = getItemVariant(item);
+                return (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #fce7f3', fontSize: '0.88rem' }}>
+                    <div>
+                      <span style={{ fontWeight: 600, color: DARK }}>{item.name}</span>
+                      {variant && <span style={{ color: MID, fontSize: '0.8rem' }}> · {variant}</span>}
+                      {item.customization?.length > 0 && <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '2px' }}>{item.customization.join(', ')}</div>}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ color: MID }}>×{item.quantity}</span>
+                      <span style={{ marginLeft: '12px', fontWeight: 700, color: ROSE }}>{(item.price * item.quantity).toFixed(2)} EGP</span>
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ color: MID }}>×{item.quantity}</span>
-                    <span style={{ marginLeft: '12px', fontWeight: 700, color: ROSE }}>{(item.price * item.quantity).toFixed(2)} EGP</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Totals */}

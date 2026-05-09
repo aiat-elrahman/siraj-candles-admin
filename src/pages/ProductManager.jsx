@@ -530,13 +530,13 @@ const ProductManager = () => {
                     <div><label className="block text-sm font-medium text-gray-700 mb-1">Burn Time</label><input type="text" name="burnTime" value={formData.burnTime} onChange={handleChange} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., 40-45 hours"/></div>
                     <div><label className="block text-sm font-medium text-gray-700 mb-1">Wick Type</label><input type="text" name="wickType" value={formData.wickType} onChange={handleChange} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., Cotton"/></div>
                     <div><label className="block text-sm font-medium text-gray-700 mb-1">Coverage Space</label><input type="text" name="coverageSpace" value={formData.coverageSpace} onChange={handleChange} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., 15-20 m²"/></div>
-                    <div className="md:col-span-3"><label className="block text-sm font-medium text-gray-700 mb-1">Scent Options (comma-separated)</label><input type="text" value={formData.scentOptions.join(', ')} onChange={e => handleArrayChange('scentOptions', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., Vanilla, Rose, Oud"/><p className="mt-1 text-xs text-gray-500">Customer chooses from these as a dropdown</p></div>
+                    {/* The confusing 'Options' text box has been permanently deleted from here */}
                 </>);
             default:
-                return (<div className="md:col-span-3"><label className="block text-sm font-medium text-gray-700 mb-1">Scent / Options (comma-separated)</label><input type="text" value={formData.scentOptions.join(', ')} onChange={e => handleArrayChange('scentOptions', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border" placeholder="e.g., Rose, Vanilla"/></div>);
+                // Return null so the box doesn't appear for other categories either
+                return null; 
         }
     };
-
     return (
         <div className="space-y-6">
             {isCropping && (

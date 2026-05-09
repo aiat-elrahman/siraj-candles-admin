@@ -10,7 +10,7 @@ import ShippingManager from './pages/ShippingManager';
 import DiscountManager from './pages/DiscountManager';
 import CareManager from './pages/CareManager';
 import CategoryManager from './pages/CategoryManager';
-import HeroManager from './pages/HeroManager';
+import HomepageManager from './pages/HomepageManager';
 import Analytics from './pages/Analytics';
 import BulkUploadManager from './pages/BulkUploadManager';
 import ReviewManager from './pages/ReviewManager';
@@ -34,7 +34,7 @@ const NAV = [
   { id: 'discounts',  name: 'Discounts',       icon: Tag },
   { id: 'shipping',   name: 'Shipping',        icon: Truck },
   { id: 'care',       name: 'Product Care',    icon: LifeBuoy },
-  { id: 'hero',       name: 'Hero Section',    icon: Image },
+ { id: 'homepage',    name: 'Homepage',        icon: Image },
   { id: 'reviews',    name: 'Reviews',         icon: Star },
   { id: 'bulk',       name: 'Bulk Upload', icon: Upload }
 
@@ -339,7 +339,7 @@ const AdminDashboard = () => {
       case 'discounts':  return <DiscountManager />;
       case 'care':       return <CareManager />;
       case 'categories': return <CategoryManager />;
-      case 'hero':       return <HeroManager />;
+      case 'homepage': return <HomepageManager />;
       case 'analytics':  return <Analytics />;
       case 'reviews': return <ReviewManager />;
       case 'bulk': return <BulkUploadManager/>;

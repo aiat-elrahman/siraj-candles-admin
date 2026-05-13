@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Package, ShoppingCart, Truck, Tag, LifeBuoy, Grid,
   Menu, X, LogOut, BarChart3, Image, Bell, Search,
-  ChevronRight, Home, Star , Upload
+  ChevronRight, Home, Star , Upload , Calendar
 } from 'lucide-react';
 import ProductManager from './pages/ProductManager';
 import OrderManager from './pages/OrderManager';
@@ -14,6 +14,7 @@ import HomepageManager from './pages/HomepageManager';
 import Analytics from './pages/Analytics';
 import BulkUploadManager from './pages/BulkUploadManager';
 import ReviewManager from './pages/ReviewManager';
+import ContentPlanner from './pages/ContentPlanner';
 // ── Design tokens matching the ERP ──────────────────────────────────────────
 const DARK    = '#1E1023';
 const PINK    = '#F472B6';
@@ -34,7 +35,8 @@ const NAV = [
   { id: 'discounts',  name: 'Discounts',       icon: Tag },
   { id: 'shipping',   name: 'Shipping',        icon: Truck },
   { id: 'care',       name: 'Product Care',    icon: LifeBuoy },
- { id: 'homepage',    name: 'Homepage',        icon: Image },
+  {id: 'content',     name: 'Content Planner', icon: Calendar },
+  { id: 'homepage',    name: 'Homepage',        icon: Image },
   { id: 'reviews',    name: 'Reviews',         icon: Star },
   { id: 'bulk',       name: 'Bulk Upload', icon: Upload }
 
@@ -342,6 +344,7 @@ const AdminDashboard = () => {
       case 'homepage': return <HomepageManager />;
       case 'analytics':  return <Analytics />;
       case 'reviews': return <ReviewManager />;
+      case 'content':    return <ContentPlanner />;
       case 'bulk': return <BulkUploadManager/>;
       default:           return <Analytics />;
     }

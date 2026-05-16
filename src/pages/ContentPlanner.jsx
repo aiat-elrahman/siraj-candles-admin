@@ -7,6 +7,21 @@ import {
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────
+// RESPONSIVE HOOK
+// ─────────────────────────────────────────────
+const useWindowWidth = () => {
+  const [width, setWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 1024
+  );
+  useEffect(() => {
+    const handler = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  return width;
+};
+
+// ─────────────────────────────────────────────
 // DESIGN TOKENS — match your existing dashboard
 // ─────────────────────────────────────────────
 const DARK  = '#1E1023';
@@ -121,7 +136,10 @@ export default function ContentPlanner() {
   const [newDayDate,    setNewDayDate]    = useState('');
   const [uploadingPost, setUploadingPost] = useState(null); // postId being uploaded
 
-  const saveTimerRef = useRef(null);
+  const saveTimerRef  = useRef(null);
+  const windowWidth   = useWindowWidth();
+  const isMobile      = windowWidth < 768;
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // ── Toast ──────────────────────────────────
   const showToast = useCallback((msg, type = 'ok') => {
@@ -492,7 +510,7 @@ export default function ContentPlanner() {
     const dates = Object.keys(plans).sort();
 
     return (
-      <div style={{ padding: 24 }}>
+      <div style={{ padding: isMobile ? 16 : 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '2rem', fontWeight: 700, color: DARK, margin: 0 }}>
@@ -502,12 +520,14 @@ export default function ContentPlanner() {
               Plan, track and measure every piece of content
             </p>
           </div>
+          {!isMobile && (
           <button
             onClick={() => { setNewDayDate(new Date().toISOString().split('T')[0]); setAddDayModal(true); }}
             style={btnPrimary}
           >
             <Plus size={15} /> Plan a Day
           </button>
+          )}
         </div>
 
         {dates.length === 0 ? (
@@ -520,7 +540,7 @@ export default function ContentPlanner() {
             </button>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
             {dates.map(dateStr => {
               const day    = plans[dateStr];
               const date   = parseDateStr(dateStr);
@@ -604,7 +624,7 @@ export default function ContentPlanner() {
     const posts   = (day.posts || []).filter(p => activeFilters.has(p.type));
 
     return (
-      <div style={{ padding: 24 }}>
+      <div style={{ padding: isMobile ? 16 : 24 }}>
         {/* Back */}
         <button onClick={() => setSelectedDate(null)} style={{ ...btnIcon, marginBottom: 20, color: MID, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 4 }}>
           <ChevronLeft size={15} /> Back to Overview
@@ -1001,8 +1021,70 @@ export default function ContentPlanner() {
   // ─────────────────────────────────────────────────────────
   // MAIN LAYOUT
   // ─────────────────────────────────────────────────────────
+  // ── Sidebar content (shared between desktop + mobile drawer) ──
+  const renderSidebarContent = () => (
+    <>
+      {/* Calendar */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: MID, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12, borderBottom: `1px solid ${CREAM}`, paddingBottom: 8 }}>
+          Calendar
+        </div>
+        {renderMiniCalendar()}
+      </div>
+
+      {/* Filters */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: MID, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, borderBottom: `1px solid ${CREAM}`, paddingBottom: 8 }}>
+          Filter Types
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {Object.entries(POST_TYPES).map(([key, obj]) => (
+            <button key={key} onClick={() => toggleFilter(key)}
+              style={{
+                fontSize: '0.65rem', fontWeight: 700, padding: '4px 10px', borderRadius: 99,
+                cursor: 'pointer', border: `1px solid ${obj.color}30`,
+                background: obj.bg, color: obj.color,
+                opacity: activeFilters.has(key) ? 1 : 0.35,
+                transition: 'opacity 0.15s',
+                fontFamily: 'Montserrat, sans-serif',
+              }}
+            >{obj.label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div>
+        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: MID, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12, borderBottom: `1px solid ${CREAM}`, paddingBottom: 8 }}>
+          Content Stats
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[
+            { label: 'Total Planned', val: totalPosts,  color: DARK },
+            { label: 'Ready',         val: readyCount,  color: '#854d0e' },
+            { label: 'Posted',        val: postedCount, color: '#15803d' },
+          ].map(({ label, val, color }) => (
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem' }}>
+              <span style={{ color: MID }}>{label}</span>
+              <span style={{ fontWeight: 700, color }}>{val}</span>
+            </div>
+          ))}
+          <div style={{ background: CREAM, height: 6, borderRadius: 99, overflow: 'hidden', marginTop: 4 }}>
+            <div style={{ background: ROSE, height: '100%', width: `${totalPosts ? (postedCount / totalPosts) * 100 : 0}%`, transition: 'width 0.4s', borderRadius: 99 }} />
+          </div>
+        </div>
+      </div>
+
+      {saving && (
+        <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 6, color: MID, fontSize: '0.72rem' }}>
+          <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Saving…
+        </div>
+      )}
+    </>
+  );
+
   return (
-    <div style={{ display: 'flex', height: '100%', fontFamily: 'Montserrat, sans-serif', position: 'relative' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontFamily: 'Montserrat, sans-serif', position: 'relative' }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         * { box-sizing: border-box; }
@@ -1016,71 +1098,87 @@ export default function ContentPlanner() {
         ::-webkit-scrollbar-thumb { background: ${LIGHT}; border-radius: 99px; }
       `}</style>
 
-      {/* ── Sidebar ── */}
-      <div style={{ width: 260, flexShrink: 0, background: '#fff', borderRight: `1px solid ${CREAM}`, display: 'flex', flexDirection: 'column', overflowY: 'auto', padding: '20px 16px' }}>
-
-        {/* Calendar */}
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 700, color: MID, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12, borderBottom: `1px solid ${CREAM}`, paddingBottom: 8 }}>
-            Calendar
-          </div>
-          {renderMiniCalendar()}
-        </div>
-
-        {/* Filters */}
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 700, color: MID, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, borderBottom: `1px solid ${CREAM}`, paddingBottom: 8 }}>
-            Filter Types
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {Object.entries(POST_TYPES).map(([key, obj]) => (
-              <button key={key} onClick={() => toggleFilter(key)}
-                style={{
-                  fontSize: '0.65rem', fontWeight: 700, padding: '4px 10px', borderRadius: 99,
-                  cursor: 'pointer', border: `1px solid ${obj.color}30`,
-                  background: obj.bg, color: obj.color,
-                  opacity: activeFilters.has(key) ? 1 : 0.35,
-                  transition: 'opacity 0.15s',
-                  fontFamily: 'Montserrat, sans-serif',
-                }}
-              >{obj.label}</button>
-            ))}
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div>
-          <div style={{ fontSize: '0.65rem', fontWeight: 700, color: MID, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12, borderBottom: `1px solid ${CREAM}`, paddingBottom: 8 }}>
-            Content Stats
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {[
-              { label: 'Total Planned', val: totalPosts,  color: DARK },
-              { label: 'Ready',         val: readyCount,  color: '#854d0e' },
-              { label: 'Posted',        val: postedCount, color: '#15803d' },
-            ].map(({ label, val, color }) => (
-              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem' }}>
-                <span style={{ color: MID }}>{label}</span>
-                <span style={{ fontWeight: 700, color }}>{val}</span>
-              </div>
-            ))}
-            <div style={{ background: CREAM, height: 6, borderRadius: 99, overflow: 'hidden', marginTop: 4 }}>
-              <div style={{ background: ROSE, height: '100%', width: `${totalPosts ? (postedCount / totalPosts) * 100 : 0}%`, transition: 'width 0.4s', borderRadius: 99 }} />
+      {/* ── MOBILE: Top bar with calendar toggle ── */}
+      {isMobile && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 16px', background: '#fff', borderBottom: `1px solid ${CREAM}`,
+          flexShrink: 0,
+        }}>
+          <div>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: '1.1rem', color: DARK }}>
+              Content Planner
             </div>
+            {saving && (
+              <div style={{ fontSize: '0.65rem', color: MID, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Loader2 size={10} style={{ animation: 'spin 1s linear infinite' }} /> Saving…
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => { setNewDayDate(new Date().toISOString().split('T')[0]); setAddDayModal(true); }}
+              style={{ ...btnPrimary, padding: '8px 14px', fontSize: '0.75rem' }}
+            >
+              <Plus size={13} /> Plan Day
+            </button>
+            <button
+              onClick={() => setSidebarOpen(v => !v)}
+              style={{ ...btnOutline, padding: '8px 12px' }}
+              title="Calendar & Filters"
+            >
+              <CalendarIcon size={16} />
+            </button>
           </div>
         </div>
+      )}
 
-        {/* Saving indicator */}
-        {saving && (
-          <div style={{ marginTop: 'auto', paddingTop: 20, display: 'flex', alignItems: 'center', gap: 6, color: MID, fontSize: '0.72rem' }}>
-            <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Saving…
+      {/* ── MOBILE: Slide-down sidebar drawer ── */}
+      {isMobile && sidebarOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setSidebarOpen(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(30,16,35,0.35)', zIndex: 40 }}
+          />
+          {/* Drawer */}
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
+            background: '#fff', borderRadius: '0 0 20px 20px',
+            boxShadow: '0 8px 40px rgba(0,0,0,0.15)',
+            padding: '20px 20px 28px',
+            maxHeight: '85vh', overflowY: 'auto',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <span style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: '1.1rem', color: DARK }}>
+                Calendar & Filters
+              </span>
+              <button onClick={() => setSidebarOpen(false)} style={btnIcon}><X size={18} /></button>
+            </div>
+            {renderSidebarContent()}
+          </div>
+        </>
+      )}
+
+      {/* ── DESKTOP + MOBILE body ── */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+
+        {/* Desktop sidebar — hidden on mobile */}
+        {!isMobile && (
+          <div style={{
+            width: 260, flexShrink: 0, background: '#fff',
+            borderRight: `1px solid ${CREAM}`, display: 'flex',
+            flexDirection: 'column', overflowY: 'auto', padding: '20px 16px',
+          }}>
+            {renderSidebarContent()}
           </div>
         )}
-      </div>
 
-      {/* ── Main area ── */}
-      <div style={{ flex: 1, overflowY: 'auto', background: PALE }}>
-        {selectedDate ? renderDayDetail() : renderOverview()}
+        {/* ── Main area ── */}
+        <div style={{ flex: 1, overflowY: 'auto', background: PALE, minWidth: 0 }}>
+          {selectedDate ? renderDayDetail() : renderOverview()}
+        </div>
+
       </div>
 
       {/* ── Add Day Modal ── */}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Package, ShoppingCart, Truck, Tag, LifeBuoy, Grid,
   Menu, X, LogOut, BarChart3, Image, Bell, Search,
-  ChevronRight, Home, Star , Upload , Calendar
+  ChevronRight, Home, Star , Upload , Calendar, ShoppingBag
 } from 'lucide-react';
 import ProductManager from './pages/ProductManager';
 import OrderManager from './pages/OrderManager';
@@ -15,6 +15,9 @@ import Analytics from './pages/Analytics';
 import BulkUploadManager from './pages/BulkUploadManager';
 import ReviewManager from './pages/ReviewManager';
 import ContentPlanner from './pages/ContentPlanner';
+import BazaarPOS from './pages/BazaarPOS';
+
+
 // ── Design tokens matching the ERP ──────────────────────────────────────────
 const DARK    = '#1E1023';
 const PINK    = '#F472B6';
@@ -36,9 +39,10 @@ const NAV = [
   { id: 'shipping',   name: 'Shipping',        icon: Truck },
   { id: 'care',       name: 'Product Care',    icon: LifeBuoy },
   {id: 'content',     name: 'Content Planner', icon: Calendar },
-  { id: 'homepage',    name: 'Homepage',        icon: Image },
+  { id: 'homepage',    name: 'Homepage',       icon: Image },
   { id: 'reviews',    name: 'Reviews',         icon: Star },
-  { id: 'bulk',       name: 'Bulk Upload', icon: Upload }
+  { id: 'bulk',       name: 'Bulk Upload',     icon: Upload },
+  { id: 'bazaar',     name: '🎪 Bazaar',       icon: ShoppingBag }
 
 ];
 
@@ -346,6 +350,7 @@ const AdminDashboard = () => {
       case 'reviews': return <ReviewManager />;
       case 'content':    return <ContentPlanner />;
       case 'bulk': return <BulkUploadManager/>;
+      case 'bazaar': return <BazaarPOS />;
       default:           return <Analytics />;
     }
   };

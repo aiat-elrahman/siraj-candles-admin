@@ -219,7 +219,7 @@ export default function BazaarPOS() {
         <div className="desktop-view-tabs" style={{ display: 'flex', gap: 10 }}>
           {[
             { id: 'pos-catalog', label: '🛒 Register Sales Catalog' },
-            { id: 'log', label: '📋 Structural Sales Log' }
+            { id: 'log', label: '📋  Sales Log' }
           ].map(tab => {
             const isPOSGroup = tab.id === 'pos-catalog' && (activeView === 'pos-catalog' || activeView === 'pos-cart');
             const isActive = activeView === tab.id || isPOSGroup;

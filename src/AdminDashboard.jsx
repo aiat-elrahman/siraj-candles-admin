@@ -60,7 +60,8 @@ const ADMIN_CSS = `
     display: flex; flex-direction: column;
     flex-shrink: 0; position: relative; z-index: 10;
   }
-  .admin-logo-area {
+  
+    .admin-logo-area {
     padding: 24px 20px;
     border-bottom: 1px solid rgba(255,255,255,0.08);
   }
@@ -74,8 +75,10 @@ const ADMIN_CSS = `
     color: ${LIGHT}; letter-spacing: 0.18em;
     text-transform: uppercase; margin-top: 2px;
   }
-  .admin-nav { flex: 1; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; }
-
+  .admin-nav { flex: 1; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto;}
+.admin-nav::-webkit-scrollbar { width: 4px; }
+  .admin-nav::-webkit-scrollbar-track { background: transparent; }
+  .admin-nav::-webkit-scrollbar-thumb { background: ${MID}; border-radius: 10px; }
   .admin-nav-item {
     display: flex; align-items: center; gap: 10px;
     padding: 10px 14px; border-radius: 10px;
@@ -241,13 +244,16 @@ const ADMIN_CSS = `
 
   @media (max-width: 768px) {
     .admin-sidebar { 
-        position: fixed;
+       position: sticky; top: 0;
         left: 0; top: 0;
+        width: 240px; 
         height: 100vh;
         transform: translateX(-100%);
         transition: transform 0.3s ease;
         z-index: 200;
-        width: 240px;
+        background: ${DARK};
+    display: flex; flex-direction: column;
+    flex-shrink: 0; 
     }
     .admin-sidebar.mobile-open { transform: translateX(0); }
     .admin-main { padding: 16px; width: 100%; }

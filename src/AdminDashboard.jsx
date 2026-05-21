@@ -55,13 +55,15 @@ const ADMIN_CSS = `
 
   /* Sidebar */
   .admin-sidebar {
-    width: 240px; min-height: 100vh;
+    width: 240px; 
+    height: 100vh;
+    position: sticky; top: 0;
     background: ${DARK};
     display: flex; flex-direction: column;
-    flex-shrink: 0; position: relative; z-index: 10;
+    flex-shrink: 0; z-index: 10;
   }
   
-    .admin-logo-area {
+  .admin-logo-area {
     padding: 24px 20px;
     border-bottom: 1px solid rgba(255,255,255,0.08);
   }
@@ -76,7 +78,7 @@ const ADMIN_CSS = `
     text-transform: uppercase; margin-top: 2px;
   }
   .admin-nav { flex: 1; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto;}
-.admin-nav::-webkit-scrollbar { width: 4px; }
+  .admin-nav::-webkit-scrollbar { width: 4px; }
   .admin-nav::-webkit-scrollbar-track { background: transparent; }
   .admin-nav::-webkit-scrollbar-thumb { background: ${MID}; border-radius: 10px; }
   .admin-nav-item {
@@ -244,22 +246,22 @@ const ADMIN_CSS = `
 
   @media (max-width: 768px) {
     .admin-sidebar { 
-       position: sticky; top: 0;
-        left: 0; top: 0;
-        width: 240px; 
-        height: 100vh;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        z-index: 200;
-        background: ${DARK};
-    display: flex; flex-direction: column;
-    flex-shrink: unset;
+      position: fixed !important;
+      left: 0; top: 0;
+      width: 240px; 
+      height: 100vh;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      z-index: 200;
+      background: ${DARK};
+      display: flex; flex-direction: column;
+      flex-shrink: unset;
     }
     .admin-sidebar.mobile-open { transform: translateX(0); }
     .admin-main { padding: 16px; width: 100%; }
     .admin-header { padding: 0 16px; }
     .admin-root { display: block; }
-}
+  }
 `;
 
 // ── Main component ───────────────────────────────────────────────────────────

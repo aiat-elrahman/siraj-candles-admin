@@ -42,7 +42,7 @@ const NAV = [
   { id: 'homepage',    name: 'Homepage',       icon: Image },
   { id: 'reviews',    name: 'Reviews',         icon: Star },
   { id: 'bulk',       name: 'Bulk Upload',     icon: Upload },
-  { id: 'bazaar',     name: '🎪 Bazaar',       icon: ShoppingBag }
+  { id: 'bazaar',     name: ' Bazaar',       icon: ShoppingBag }
 
 ];
 

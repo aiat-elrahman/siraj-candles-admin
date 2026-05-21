@@ -253,7 +253,7 @@ const ADMIN_CSS = `
         z-index: 200;
         background: ${DARK};
     display: flex; flex-direction: column;
-    flex-shrink: 0; 
+    flex-shrink: unset;
     }
     .admin-sidebar.mobile-open { transform: translateX(0); }
     .admin-main { padding: 16px; width: 100%; }

@@ -195,11 +195,24 @@ export default function BazaarPOS() {
     }
   };
 
-  const deleteSale = async (id) => {
-    if (!window.confirm('Delete this sale permanently? Inventory numbers will not be modified.')) return;
-    await fetch(`${API}/api/bazaar/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-    fetchSales();
-  };
+const deleteSale = async (id) => {
+  if (!window.confirm('Delete this sale permanently? Inventory numbers will not be modified.')) return;
+  try {
+    const res = await fetch(`${API}/api/bazaar/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Delete failed');
+    fetchSales();  // refresh the list on success
+  } catch (err) {
+    alert(`Delete failed: ${err.message}`);
+  }
+};
+if (!token) {
+  alert('No admin token found. Please log in again.');
+  return;
+}
 
   const daySales = (day) => sales.filter(s => day === 'All' || s.bazaarDay === day);
   const dayRevenue = (day) => daySales(day).reduce((s, o) => s + o.totalAmount, 0);

@@ -393,7 +393,7 @@ export default function Analytics() {
 
           {/* Payment split */}
           <Card>
-            <SectionTitle>Payment Methods (Bazaar)" sub="Cash vs InstaPay across all events" />
+            <SectionTitle>Payment Methods (Bazaar)" sub="Cash vs InstaPay across all events" /</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               {[
                 { label: '💵 Cash', value: overview?.cashVault || 0, color: '#059669', bg: '#d1fae5' },
@@ -409,7 +409,8 @@ export default function Analytics() {
 
           {/* Recent web orders */}
           <Card>
-            <SectionTitle>Recent Website Orders" />
+            <SectionTitle>Recent Website Orders" /</SectionTitle>
+
             {recentOrders.length === 0 ? (
               <p style={{ color: MID, fontSize: 13, fontStyle: 'italic' }}>No orders yet.</p>
             ) : (

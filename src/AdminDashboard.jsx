@@ -1,559 +1,541 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Package, ShoppingCart, Truck, Tag, LifeBuoy, Grid,
-  Menu, X, LogOut, BarChart3, Image, Bell, Search,
-  ChevronRight, Home, Star , Upload , Calendar, ShoppingBag
-} from 'lucide-react';
-import ProductManager from './pages/ProductManager';
-import OrderManager from './pages/OrderManager';
-import ShippingManager from './pages/ShippingManager';
-import DiscountManager from './pages/DiscountManager';
-import CareManager from './pages/CareManager';
-import CategoryManager from './pages/CategoryManager';
-import HomepageManager from './pages/HomepageManager';
-import Analytics from './pages/Analytics';
-import BulkUploadManager from './pages/BulkUploadManager';
-import ReviewManager from './pages/ReviewManager';
-import ContentPlanner from './pages/ContentPlanner';
-import BazaarPOS from './pages/BazaarPOS';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Search, RefreshCw, Save, ChevronDown, ChevronUp, Plus, Minus, AlertTriangle, CheckCircle, Filter } from 'lucide-react';
 
+const API   = 'https://siraj-backend.onrender.com';
+const DARK  = '#1E1023';
+const ROSE  = '#BE185D';
+const PINK  = '#F472B6';
+const MID   = '#6B4A6E';
+const LIGHT = '#D8B4D8';
+const CREAM = '#FCE7F3';
+const PALE  = '#FFF0F6';
 
-// ── Design tokens matching the ERP ──────────────────────────────────────────
-const DARK    = '#1E1023';
-const PINK    = '#F472B6';
-const ROSE    = '#BE185D';
-const PALE    = '#FFF0F6';
-const MID     = '#6B4A6E';
-const LIGHT   = '#D8B4D8';
-const CREAM   = '#FCE7F3';
+// ─────────────────────────────────────────────────────────────────────────────
+export default function StockManager() {
+  const token = localStorage.getItem('adminToken');
 
-const API_BASE_URL = 'https://siraj-backend.onrender.com';
+  const [products,    setProducts]    = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [saving,      setSaving]      = useState({}); // { productId: true/false }
+  const [saveAll,     setSaveAll]     = useState(false);
+  const [toast,       setToast]       = useState('');
+  const [search,      setSearch]      = useState('');
+  const [filterCat,   setFilterCat]   = useState('All');
+  const [filterStock, setFilterStock] = useState('All'); // All / Low / Out
+  const [expanded,    setExpanded]    = useState({});    // { productId: bool }
+  const [changes,     setChanges]     = useState({});    // { productId: { stock?, variants: { variantName: stock } } }
+  const [categories,  setCategories]  = useState([]);
 
-// ── Sidebar nav items ────────────────────────────────────────────────────────
-const NAV = [
-  { id: 'analytics',  name: 'Dashboard',      icon: BarChart3 },
-  { id: 'products',   name: 'Products',        icon: Package },
-  { id: 'orders',     name: 'Orders',          icon: ShoppingCart },
-  { id: 'categories', name: 'Categories',      icon: Grid },
-  { id: 'discounts',  name: 'Discounts',       icon: Tag },
-  { id: 'shipping',   name: 'Shipping',        icon: Truck },
-  { id: 'care',       name: 'Product Care',    icon: LifeBuoy },
-  {id: 'content',     name: 'Content Planner', icon: Calendar },
-  { id: 'homepage',    name: 'Homepage',       icon: Image },
-  { id: 'reviews',    name: 'Reviews',         icon: Star },
-  { id: 'bulk',       name: 'Bulk Upload',     icon: Upload },
-  { id: 'bazaar',     name: ' Bazaar',       icon: ShoppingBag }
+  const changesRef = useRef(changes);
+  changesRef.current = changes;
 
-];
-
-// ── Inject shared admin CSS once ─────────────────────────────────────────────
-const ADMIN_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap');
-
-  .admin-root * { box-sizing: border-box; }
-  .admin-root { font-family: 'Montserrat', sans-serif; }
-
-  /* Sidebar */
-  .admin-sidebar {
-    width: 240px; 
-    height: 100vh;
-    position: sticky; top: 0;
-    background: ${DARK};
-    display: flex; flex-direction: column;
-    flex-shrink: 0; z-index: 10;
-  }
-  
-  .admin-logo-area {
-    padding: 24px 20px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-  }
-  .admin-logo-name {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.5rem; font-weight: 700;
-    color: #fff; letter-spacing: 0.04em;
-  }
-  .admin-logo-sub {
-    font-size: 0.65rem; font-weight: 600;
-    color: ${LIGHT}; letter-spacing: 0.18em;
-    text-transform: uppercase; margin-top: 2px;
-  }
-  .admin-nav { flex: 1; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto;}
-  .admin-nav::-webkit-scrollbar { width: 4px; }
-  .admin-nav::-webkit-scrollbar-track { background: transparent; }
-  .admin-nav::-webkit-scrollbar-thumb { background: ${MID}; border-radius: 10px; }
-  .admin-nav-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 14px; border-radius: 10px;
-    color: ${LIGHT}; font-size: 0.85rem; font-weight: 500;
-    cursor: pointer; border: none; background: none;
-    width: 100%; text-align: left;
-    transition: all 0.2s ease;
-  }
-  .admin-nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
-  .admin-nav-item.active {
-    background: linear-gradient(135deg, ${ROSE}, #9d174d);
-    color: #fff;
-    box-shadow: 0 4px 12px rgba(190,24,93,0.35);
-  }
-  .admin-nav-item svg { flex-shrink: 0; }
-
-  .admin-user-area {
-    display: flex; align-items: center; gap: 10px;
-    padding: 16px 20px;
-    border-top: 1px solid rgba(255,255,255,0.08);
-  }
-  .admin-avatar {
-    width: 34px; height: 34px; border-radius: 50%;
-    background: linear-gradient(135deg, ${PINK}, #fb7185);
-    display: flex; align-items: center; justify-content: center;
-    color: #fff; font-weight: 700; font-size: 0.85rem;
-    flex-shrink: 0;
-  }
-  .admin-user-name { color: #fff; font-size: 0.82rem; font-weight: 600; }
-  .admin-user-role { color: ${LIGHT}; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; }
-
-  .admin-logout-btn {
-    display: flex; align-items: center; gap: 8px;
-    padding: 9px 14px; border-radius: 8px;
-    color: ${LIGHT}; font-size: 0.82rem; font-weight: 500;
-    cursor: pointer; border: none; background: none;
-    width: 100%; transition: all 0.2s;
-    margin-top: 4px;
-  }
-  .admin-logout-btn:hover { background: rgba(244,63,94,0.12); color: #f87171; }
-
-  /* Header */
-  .admin-header {
-    height: 64px; background: #fff;
-    border-bottom: 1px solid #fce7f3;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 28px;
-    box-shadow: 0 1px 8px rgba(190,24,93,0.06);
-    position: sticky; top: 0; z-index: 5;
-  }
-  .admin-page-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.4rem; font-weight: 700; color: ${DARK};
-    letter-spacing: 0.01em;
-  }
-  .admin-breadcrumb {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 0.75rem; color: ${MID}; margin-top: 2px;
-  }
-  .admin-header-actions { display: flex; align-items: center; gap: 8px; }
-  .admin-icon-btn {
-    width: 36px; height: 36px; border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    border: 1px solid ${CREAM}; background: ${PALE};
-    color: ${MID}; cursor: pointer;
-    transition: all 0.2s;
-  }
-  .admin-icon-btn:hover { background: ${CREAM}; color: ${ROSE}; border-color: #f9a8d4; }
-
-  /* Main content area */
-  .admin-main { flex: 1; background: ${PALE}; overflow-y: auto; padding: 28px; }
-
-  /* Override component cards to match theme */
-  .admin-main .bg-white {
-    border: 1px solid rgba(244,114,182,0.15) !important;
-    box-shadow: 0 2px 16px rgba(190,24,93,0.06) !important;
-    border-radius: 16px !important;
-  }
-  .admin-main thead.text-xs th,
-  .admin-main thead th {
-    background: #fdf2f8 !important;
-    color: ${MID} !important;
-  }
-  .admin-main .bg-indigo-600,
-  .admin-main .bg-indigo-700 { background: linear-gradient(135deg, ${ROSE}, #9d174d) !important; }
-  .admin-main .hover\\:bg-indigo-700:hover { background: #9d174d !important; }
-  .admin-main .text-indigo-600 { color: ${ROSE} !important; }
-  .admin-main .border-indigo-500,
-  .admin-main .focus\\:border-indigo-500:focus { border-color: #f9a8d4 !important; }
-  .admin-main .focus\\:ring-indigo-500:focus { --tw-ring-color: rgba(244,114,182,0.25) !important; }
-  .admin-main .bg-indigo-50 { background: ${PALE} !important; }
-  .admin-main .text-indigo-700 { color: ${ROSE} !important; }
-  .admin-main .border-indigo-600 { border-color: ${ROSE} !important; }
-  .admin-main .bg-indigo-100 { background: ${CREAM} !important; }
-
-  /* Mobile overlay */
-  .admin-mobile-overlay {
-    position: fixed; inset: 0; background: rgba(30,16,35,0.6);
-    backdrop-filter: blur(3px); z-index: 9;
-    display: none;
-  }
-  .admin-mobile-overlay.visible { display: block; }
-  .admin-sidebar.mobile-open { position: fixed; left: 0; top: 0; z-index: 10; height: 100vh; }
-
-  /* Login page */
-  .admin-login-wrap {
-    min-height: 100vh; background: ${DARK};
-    display: flex; align-items: center; justify-content: center;
-    padding: 2rem;
-    background-image: radial-gradient(circle at 20% 80%, rgba(244,114,182,0.12) 0%, transparent 50%),
-                      radial-gradient(circle at 80% 20%, rgba(190,24,93,0.08) 0%, transparent 50%);
-  }
-  .admin-login-card {
-    background: rgba(255,255,255,0.97);
-    border-radius: 20px;
-    padding: 40px 36px;
-    width: 100%; max-width: 400px;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.4);
-  }
-  .admin-login-logo {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 2.2rem; font-weight: 700;
-    color: ${DARK}; letter-spacing: 0.04em;
-    text-align: center; margin-bottom: 4px;
-  }
-  .admin-login-sub {
-    text-align: center; color: ${MID};
-    font-size: 0.82rem; margin-bottom: 28px;
-    text-transform: uppercase; letter-spacing: 0.12em;
-  }
-  .admin-login-label {
-    display: block; font-size: 0.72rem; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.1em;
-    color: ${MID}; margin-bottom: 6px;
-  }
-  .admin-login-input {
-    width: 100%; padding: 11px 14px;
-    border: 1.5px solid #e5e7eb; border-radius: 10px;
-    font-size: 0.9rem; font-family: 'Montserrat', sans-serif;
-    outline: none; color: ${DARK};
-    transition: border-color 0.2s;
-    margin-bottom: 16px;
-  }
-  .admin-login-input:focus { border-color: ${PINK}; box-shadow: 0 0 0 3px rgba(244,114,182,0.12); }
-  .admin-login-btn {
-    width: 100%; padding: 13px;
-    background: linear-gradient(135deg, ${PINK}, ${ROSE});
-    color: #fff; border: none; border-radius: 10px;
-    font-size: 0.88rem; font-weight: 700; cursor: pointer;
-    font-family: 'Montserrat', sans-serif;
-    letter-spacing: 0.06em; text-transform: uppercase;
-    box-shadow: 0 4px 16px rgba(244,114,182,0.35);
-    transition: all 0.2s;
-    margin-top: 4px;
-  }
-  .admin-login-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(244,114,182,0.45); }
-  .admin-login-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
-  .admin-login-error {
-    background: #fee2e2; border: 1px solid #fca5a5;
-    color: #991b1b; padding: 10px 14px; border-radius: 8px;
-    font-size: 0.84rem; margin-bottom: 16px;
-  }
-
-  @media (max-width: 768px) {
-    .admin-sidebar { 
-      position: fixed !important;
-      left: 0; top: 0;
-      width: 240px; 
-      height: 100vh;
-      transform: translateX(-100%);
-      transition: transform 0.3s ease;
-      z-index: 200;
-      background: ${DARK};
-      display: flex; flex-direction: column;
-      flex-shrink: unset;
-    }
-    .admin-sidebar.mobile-open { transform: translateX(0); }
-    .admin-main { padding: 16px; width: 100%; }
-    .admin-header { padding: 0 16px; }
-    .admin-root { display: block; }
-  }
-`;
-
-// ── Main component ───────────────────────────────────────────────────────────
-const AdminDashboard = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername]   = useState('');
-  const [password, setPassword]   = useState('');
-  const [loginError, setLoginError] = useState('');
-  const [activePage, setActivePage] = useState('analytics');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [loading, setLoading]     = useState(false);
-  const [pendingOrders, setPendingOrders] = useState(0);
-
-  // Inject CSS once
-  useEffect(() => {
-    if (!document.getElementById('siraj-admin-styles')) {
-      const style = document.createElement('style');
-      style.id = 'siraj-admin-styles';
-      style.textContent = ADMIN_CSS;
-      document.head.appendChild(style);
-    }
-  }, []);
-
-  // Auto-verify token
-  useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    if (token) verifyToken(token);
-  }, []);
-
-  // Fetch pending order count for badge
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    fetch(`${API_BASE_URL}/api/orders`)
-      .then(r => r.json())
-      .then(data => {
-        const orders = Array.isArray(data) ? data : [];
-        setPendingOrders(orders.filter(o => o.status === 'Pending').length);
-      })
-      .catch(() => {});
-  }, [isAuthenticated, activePage]);
-
-  const verifyToken = async (token) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/admin/verify`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) setIsAuthenticated(true);
-      else localStorage.removeItem('adminToken');
-    } catch { localStorage.removeItem('adminToken'); }
+  // ── Toast helper ──────────────────────────────────────────────────────────
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2800);
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true); setLoginError('');
+  // ── Fetch all products ────────────────────────────────────────────────────
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    setChanges({});
     try {
-      const res = await fetch(`${API_BASE_URL}/api/admin/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+      const res  = await fetch(`${API}/api/products?limit=1000&status=Active`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
-      if (res.ok && data.token) {
-        localStorage.setItem('adminToken', data.token);
-        setIsAuthenticated(true);
-        setUsername(''); setPassword('');
-      } else {
-        setLoginError(data.message || 'Invalid username or password');
+      const list = data.results || [];
+      setProducts(list);
+      const cats = [...new Set(list.map(p => p.category).filter(Boolean))].sort();
+      setCategories(cats);
+    } catch (e) {
+      showToast('❌ Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+
+  // ── Track a change ────────────────────────────────────────────────────────
+  const markChange = (productId, field, value) => {
+    setChanges(prev => ({
+      ...prev,
+      [productId]: {
+        ...prev[productId],
+        [field]: value,
       }
-    } catch { setLoginError('Network error. Please try again.'); }
-    finally { setLoading(false); }
+    }));
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    setIsAuthenticated(false);
-    setActivePage('analytics');
+  const markVariantChange = (productId, variantName, value) => {
+    setChanges(prev => ({
+      ...prev,
+      [productId]: {
+        ...prev[productId],
+        variants: {
+          ...(prev[productId]?.variants || {}),
+          [variantName]: value,
+        }
+      }
+    }));
   };
 
-  const navigate = (id) => {
-    setActivePage(id);
-    setSidebarOpen(false);
-  };
+  // ── Save a single product ─────────────────────────────────────────────────
+  const saveProduct = async (product) => {
+    const pid     = product._id;
+    const change  = changesRef.current[pid];
+    if (!change) return; // nothing changed
 
-  const renderPage = () => {
-    switch (activePage) {
-      case 'products':   return <ProductManager />;
-      case 'orders':     return <OrderManager />;
-      case 'shipping':   return <ShippingManager />;
-      case 'discounts':  return <DiscountManager />;
-      case 'care':       return <CareManager />;
-      case 'categories': return <CategoryManager />;
-      case 'homepage': return <HomepageManager />;
-      case 'analytics':  return <Analytics />;
-      case 'reviews': return <ReviewManager />;
-      case 'content':    return <ContentPlanner />;
-      case 'bulk': return <BulkUploadManager/>;
-      case 'bazaar': return <BazaarPOS />;
-      default:           return <Analytics />;
+    setSaving(prev => ({ ...prev, [pid]: true }));
+    try {
+      // Build updated product data
+      const updatedVariants = (product.variants || []).map(v => ({
+        ...v,
+        stock: change.variants?.[v.variantName] !== undefined
+          ? parseInt(change.variants[v.variantName]) || 0
+          : v.stock,
+      }));
+
+      // If has variants, sync main stock to sum of variants
+      const newMainStock = updatedVariants.length > 0
+        ? updatedVariants.reduce((s, v) => s + (v.stock || 0), 0)
+        : (change.stock !== undefined ? parseInt(change.stock) || 0 : product.stock);
+
+      // We need to send full productData as the endpoint expects
+      const productData = {
+        ...product,
+        stock:    newMainStock,
+        variants: updatedVariants,
+        existingImagePaths: product.imagePaths || [],
+      };
+
+      const formData = new FormData();
+      formData.append('productData', JSON.stringify(productData));
+
+      const res = await fetch(`${API}/api/products/${pid}`, {
+        method:  'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body:    formData,
+      });
+
+      if (!res.ok) throw new Error('Save failed');
+
+      // Update local state
+      setProducts(prev => prev.map(p => {
+        if (p._id !== pid) return p;
+        return { ...p, stock: newMainStock, variants: updatedVariants };
+      }));
+
+      // Clear changes for this product
+      setChanges(prev => {
+        const next = { ...prev };
+        delete next[pid];
+        return next;
+      });
+
+      showToast(`✅ ${product.name_en || product.bundleName || product.name} saved`);
+    } catch (e) {
+      showToast(`❌ Failed to save — ${e.message}`);
+    } finally {
+      setSaving(prev => ({ ...prev, [pid]: false }));
     }
   };
 
-  const currentNav = NAV.find(n => n.id === activePage);
+  // ── Save ALL changed products ─────────────────────────────────────────────
+  const saveAllChanges = async () => {
+    const changedIds = Object.keys(changesRef.current);
+    if (changedIds.length === 0) { showToast('No changes to save.'); return; }
+    setSaveAll(true);
+    for (const pid of changedIds) {
+      const product = products.find(p => p._id === pid);
+      if (product) await saveProduct(product);
+    }
+    setSaveAll(false);
+    showToast(`✅ All changes saved!`);
+  };
 
-  // ── LOGIN SCREEN ───────────────────────────────────────────────────────────
-  if (!isAuthenticated) {
-    return (
-      <div className="admin-login-wrap">
-        <div className="admin-login-card">
-          <div className="admin-login-logo">Siraj</div>
-          <div className="admin-login-sub">Admin Dashboard</div>
+  // ── Quick add helper ──────────────────────────────────────────────────────
+  const quickAdd = (product, amount) => {
+    const currentStock = changesRef.current[product._id]?.stock !== undefined
+      ? parseInt(changesRef.current[product._id].stock)
+      : (product.stock || 0);
+    markChange(product._id, 'stock', Math.max(0, currentStock + amount));
+  };
 
-          {loginError && <div className="admin-login-error">{loginError}</div>}
+  const quickAddVariant = (product, variantName, currentStock, amount) => {
+    const cur = changesRef.current[product._id]?.variants?.[variantName] !== undefined
+      ? parseInt(changesRef.current[product._id].variants[variantName])
+      : (currentStock || 0);
+    markVariantChange(product._id, variantName, Math.max(0, cur + amount));
+  };
 
-          <form onSubmit={handleLogin}>
-            <label className="admin-login-label">Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              className="admin-login-input"
-              placeholder="Enter your username"
-              required
-              disabled={loading}
-              autoComplete="username"
-            />
-            <label className="admin-login-label">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="admin-login-input"
-              placeholder="Enter your password"
-              required
-              disabled={loading}
-              autoComplete="current-password"
-            />
-            <button type="submit" disabled={loading} className="admin-login-btn">
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
+  // ── Filters ───────────────────────────────────────────────────────────────
+  const filteredProducts = products.filter(p => {
+    const name = (p.name_en || p.bundleName || p.name || '').toLowerCase();
+    if (search && !name.includes(search.toLowerCase())) return false;
+    if (filterCat !== 'All' && p.category !== filterCat) return false;
 
-          <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '0.75rem', color: MID }}>
-            Secure admin access · Siraj Candles
+    if (filterStock === 'Out') {
+      const totalStock = p.variants?.length > 0
+        ? p.variants.reduce((s, v) => s + (v.stock || 0), 0)
+        : (p.stock || 0);
+      return totalStock === 0;
+    }
+    if (filterStock === 'Low') {
+      const totalStock = p.variants?.length > 0
+        ? p.variants.reduce((s, v) => s + (v.stock || 0), 0)
+        : (p.stock || 0);
+      return totalStock > 0 && totalStock <= 5;
+    }
+    return true;
+  });
+
+  const changedCount = Object.keys(changes).length;
+
+  // ── Input style ───────────────────────────────────────────────────────────
+  const numInput = (value, onChange, onBlur) => (
+    <input
+      type="number" min="0" value={value}
+      onChange={e => onChange(e.target.value)}
+      onBlur={onBlur}
+      style={{
+        width: 68, padding: '5px 8px', border: `1.5px solid ${CREAM}`,
+        borderRadius: 7, fontSize: 13, fontWeight: 700,
+        fontFamily: 'Montserrat, sans-serif', color: DARK,
+        outline: 'none', textAlign: 'center',
+        background: value !== undefined ? PALE : '#fff',
+      }}
+    />
+  );
+
+  // ─────────────────────────────────────────────────────────────────────────
+  return (
+    <div style={{ fontFamily: 'Montserrat, sans-serif', color: DARK }}>
+
+      {/* ── Toast ── */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 16, right: 16, zIndex: 9999,
+          padding: '10px 18px', borderRadius: 10, fontWeight: 700, fontSize: 13,
+          background: toast.startsWith('✅') ? '#d1fae5' : '#fee2e2',
+          color: toast.startsWith('✅') ? '#065f46' : '#991b1b',
+          border: toast.startsWith('✅') ? '1px solid #bbf7d0' : '1px solid #fecaca',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        }}>{toast}</div>
+      )}
+
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '2rem', fontWeight: 700, margin: 0, color: DARK }}>
+            📦 Quick Stock Manager
+          </h1>
+          <p style={{ fontSize: 12, color: MID, marginTop: 3 }}>
+            Edit stock inline · Auto-saves on blur · Or save all at once
           </p>
         </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {changedCount > 0 && (
+            <button onClick={saveAllChanges} disabled={saveAll} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '10px 20px', borderRadius: 10, border: 'none',
+              background: `linear-gradient(135deg, ${ROSE}, #9d174d)`,
+              color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+              fontFamily: 'Montserrat, sans-serif',
+              boxShadow: '0 4px 12px rgba(190,24,93,0.3)',
+            }}>
+              {saveAll
+                ? <><RefreshCw size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> Saving...</>
+                : <><Save size={14} /> Save All ({changedCount} changed)</>
+              }
+            </button>
+          )}
+          <button onClick={fetchProducts} style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '10px 14px', background: '#fff',
+            border: `1px solid ${CREAM}`, borderRadius: 10,
+            cursor: 'pointer', fontSize: 12, fontWeight: 600, color: MID,
+            fontFamily: 'Montserrat, sans-serif',
+          }}>
+            <RefreshCw size={14} /> Refresh
+          </button>
+        </div>
       </div>
-    );
-  }
 
-  // ── DASHBOARD ──────────────────────────────────────────────────────────────
-  return (
-    <div className="admin-root" style={{ display: 'flex', minHeight: '100vh', background: PALE }}>
-
-      {/* Mobile overlay */}
-      <div
-        className={`admin-mobile-overlay ${sidebarOpen ? 'visible' : ''}`}
-        onClick={() => setSidebarOpen(false)}
-      />
-
-      {/* Sidebar */}
-      <aside className={`admin-sidebar ${sidebarOpen ? 'mobile-open' : ''}`}>
-        {/* Logo */}
-        <div className="admin-logo-area">
-          <div className="admin-logo-name">Siraj</div>
-          <div className="admin-logo-sub">Candles & Care · Admin</div>
+      {/* ── Filter bar ── */}
+      <div style={{
+        display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap',
+        alignItems: 'center', background: '#fff',
+        border: `1px solid ${CREAM}`, borderRadius: 12, padding: '12px 16px',
+      }}>
+        {/* Search */}
+        <div style={{ position: 'relative', flex: 1, minWidth: 180 }}>
+          <Search style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 14, color: MID }} />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search products..."
+            style={{
+              width: '100%', padding: '8px 12px 8px 32px',
+              border: `1.5px solid ${CREAM}`, borderRadius: 8, fontSize: 12,
+              fontFamily: 'Montserrat, sans-serif', color: DARK, outline: 'none',
+              boxSizing: 'border-box',
+            }} />
         </div>
 
-        {/* Nav */}
-        <nav className="admin-nav">
-          {NAV.map(item => {
-            const Icon = item.icon;
-            const isActive = activePage === item.id;
+        {/* Category filter */}
+        <select value={filterCat} onChange={e => setFilterCat(e.target.value)} style={{
+          padding: '8px 12px', border: `1.5px solid ${CREAM}`, borderRadius: 8,
+          fontSize: 12, fontFamily: 'Montserrat, sans-serif', color: DARK, outline: 'none',
+        }}>
+          <option value="All">All Categories</option>
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+
+        {/* Stock filter */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {[['All', ''], ['Out', '🔴 Out of Stock'], ['Low', '⚠️ Low Stock']].map(([val, label]) => (
+            <button key={val} onClick={() => setFilterStock(val)} style={{
+              padding: '7px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              fontWeight: 700, fontSize: 11, fontFamily: 'Montserrat, sans-serif',
+              background: filterStock === val ? ROSE : CREAM,
+              color: filterStock === val ? '#fff' : MID,
+            }}>
+              {label || 'All'}
+            </button>
+          ))}
+        </div>
+
+        <span style={{ fontSize: 11, color: MID, marginLeft: 'auto' }}>
+          {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {/* ── Products table ── */}
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 60 }}>
+          <RefreshCw size={32} color={ROSE} style={{ animation: 'spin 0.8s linear infinite' }} />
+          <p style={{ color: MID, fontSize: 13, marginTop: 12 }}>Loading products...</p>
+        </div>
+      ) : filteredProducts.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 60, color: MID, fontSize: 13, fontStyle: 'italic' }}>
+          No products match your filters.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {filteredProducts.map(product => {
+            const pid        = product._id;
+            const hasVariants = product.variants && product.variants.length > 0;
+            const isExpanded  = expanded[pid];
+            const isSaving    = saving[pid];
+            const isDirty     = !!changes[pid];
+            const name        = product.name_en || product.bundleName || product.name;
+
+            // Display stock (prefer pending change, fallback to product)
+            const displayMainStock = changes[pid]?.stock !== undefined
+              ? changes[pid].stock
+              : product.stock;
+
+            const totalVariantStock = hasVariants
+              ? product.variants.reduce((s, v) => s + (v.stock || 0), 0)
+              : null;
+
+            const effectiveStock = hasVariants ? totalVariantStock : (product.stock || 0);
+            const isOut  = effectiveStock === 0;
+            const isLow  = effectiveStock > 0 && effectiveStock <= 5;
+
             return (
-              <button
-                key={item.id}
-                className={`admin-nav-item ${isActive ? 'active' : ''}`}
-                onClick={() => navigate(item.id)}
-              >
-                <Icon size={16} />
-                <span>{item.name}</span>
-                {item.id === 'orders' && pendingOrders > 0 && (
-                  <span style={{
-                    marginLeft: 'auto',
-                    background: PINK,
-                    color: '#fff',
-                    borderRadius: '20px',
-                    padding: '1px 8px',
-                    fontSize: '0.68rem',
-                    fontWeight: 700,
-                    minWidth: '20px',
-                    textAlign: 'center',
-                  }}>
-                    {pendingOrders}
-                  </span>
+              <div key={pid} style={{
+                background: '#fff', borderRadius: 12,
+                border: `1.5px solid ${isDirty ? PINK : isOut ? '#fecaca' : isLow ? '#fef3c7' : CREAM}`,
+                overflow: 'hidden',
+                boxShadow: isDirty ? `0 2px 12px rgba(190,24,93,0.1)` : '0 1px 4px rgba(30,16,35,0.05)',
+              }}>
+                {/* ── Product row ── */}
+                <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', gap: 12, flexWrap: 'wrap' }}>
+
+                  {/* Thumbnail */}
+                  {product.imagePaths?.[0]
+                    ? <img src={product.imagePaths[0]} alt={name}
+                        style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                    : <div style={{ width: 44, height: 44, borderRadius: 8, background: CREAM, flexShrink: 0 }} />
+                  }
+
+                  {/* Name + category */}
+                  <div style={{ flex: 1, minWidth: 140 }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, margin: 0, color: DARK }}>{name}</p>
+                    <p style={{ fontSize: 10, color: MID, margin: '2px 0 0' }}>
+                      {product.category}{product.subcategory ? ` › ${product.subcategory}` : ''}
+                      {hasVariants && ` · ${product.variants.length} variants`}
+                    </p>
+                  </div>
+
+                  {/* Stock badge */}
+                  {isOut && (
+                    <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 700, background: '#fee2e2', color: '#dc2626', flexShrink: 0 }}>
+                      🔴 Out of Stock
+                    </span>
+                  )}
+                  {isLow && (
+                    <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 700, background: '#fef3c7', color: '#92400e', flexShrink: 0 }}>
+                      ⚠️ Only {effectiveStock} left
+                    </span>
+                  )}
+
+                  {/* Stock control — simple products */}
+                  {!hasVariants && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      {/* Quick add buttons */}
+                      {[1, 2, 5].map(n => (
+                        <button key={n} onClick={() => { quickAdd(product, n); setTimeout(() => saveProduct(product), 200); }}
+                          style={{
+                            padding: '4px 8px', borderRadius: 6, border: `1px solid ${CREAM}`,
+                            background: PALE, color: ROSE, fontSize: 10, fontWeight: 700,
+                            cursor: 'pointer', fontFamily: 'Montserrat, sans-serif',
+                          }}>+{n}</button>
+                      ))}
+                      <button onClick={() => { quickAdd(product, -1); }}
+                        style={{ padding: '4px 6px', borderRadius: 6, border: `1px solid ${CREAM}`, background: PALE, color: MID, fontSize: 10, cursor: 'pointer' }}>
+                        <Minus size={10} />
+                      </button>
+                      <input
+                        type="number" min="0"
+                        value={displayMainStock}
+                        onChange={e => markChange(pid, 'stock', e.target.value)}
+                        onBlur={() => saveProduct(product)}
+                        style={{
+                          width: 64, padding: '6px 8px',
+                          border: `1.5px solid ${isDirty ? ROSE : CREAM}`,
+                          borderRadius: 8, fontSize: 14, fontWeight: 800,
+                          fontFamily: 'Montserrat, sans-serif', color: DARK,
+                          outline: 'none', textAlign: 'center',
+                          background: isDirty ? PALE : '#fff',
+                        }}
+                      />
+                      <button onClick={() => { quickAdd(product, 1); }}
+                        style={{ padding: '4px 6px', borderRadius: 6, border: `1px solid ${CREAM}`, background: PALE, color: MID, fontSize: 10, cursor: 'pointer' }}>
+                        <Plus size={10} />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Variant total display + expand toggle */}
+                  {hasVariants && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: isOut ? '#dc2626' : isLow ? '#d97706' : DARK }}>
+                        {totalVariantStock} total
+                      </span>
+                      <button onClick={() => setExpanded(prev => ({ ...prev, [pid]: !isExpanded }))}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 4,
+                          padding: '6px 12px', borderRadius: 8,
+                          border: `1px solid ${CREAM}`, background: isExpanded ? CREAM : '#fff',
+                          cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                          color: ROSE, fontFamily: 'Montserrat, sans-serif',
+                        }}>
+                        {isExpanded ? <><ChevronUp size={12} /> Hide</> : <><ChevronDown size={12} /> Edit Variants</>}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Save button (shows when dirty) */}
+                  {isDirty && (
+                    <button onClick={() => saveProduct(product)} disabled={isSaving} style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '7px 14px', borderRadius: 8, border: 'none',
+                      background: `linear-gradient(135deg, ${ROSE}, #9d174d)`,
+                      color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                      fontFamily: 'Montserrat, sans-serif', flexShrink: 0,
+                    }}>
+                      {isSaving
+                        ? <RefreshCw size={12} style={{ animation: 'spin 0.8s linear infinite' }} />
+                        : <Save size={12} />}
+                      {isSaving ? 'Saving...' : 'Save'}
+                    </button>
+                  )}
+                </div>
+
+                {/* ── Variant rows (expanded) ── */}
+                {hasVariants && isExpanded && (
+                  <div style={{ borderTop: `1px solid ${CREAM}`, background: PALE, padding: '10px 16px 14px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
+                      {product.variants.map(variant => {
+                        const vName    = variant.variantName;
+                        const vDirty   = changes[pid]?.variants?.[vName] !== undefined;
+                        const vDisplay = vDirty ? changes[pid].variants[vName] : variant.stock;
+                        const vIsOut   = (variant.stock || 0) === 0;
+                        const vIsLow   = (variant.stock || 0) > 0 && (variant.stock || 0) <= 3;
+
+                        return (
+                          <div key={vName} style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            background: '#fff', borderRadius: 8, padding: '8px 12px',
+                            border: `1px solid ${vDirty ? PINK : vIsOut ? '#fecaca' : vIsLow ? '#fef3c7' : CREAM}`,
+                          }}>
+                            {/* Variant name */}
+                            <div style={{ flex: 1 }}>
+                              <p style={{ fontSize: 12, fontWeight: 700, margin: 0, color: DARK }}>{vName}</p>
+                              <p style={{ fontSize: 10, color: MID, margin: '1px 0 0' }}>
+                                {variant.price?.toFixed(2)} EGP
+                                {vIsOut && <span style={{ color: '#dc2626', marginLeft: 6 }}>🔴 Out</span>}
+                                {vIsLow && <span style={{ color: '#d97706', marginLeft: 6 }}>⚠️ Low</span>}
+                              </p>
+                            </div>
+
+                            {/* Quick add for variant */}
+                            {[1, 2].map(n => (
+                              <button key={n}
+                                onClick={() => { quickAddVariant(product, vName, variant.stock, n); setTimeout(() => saveProduct(product), 200); }}
+                                style={{
+                                  padding: '3px 7px', borderRadius: 5, border: `1px solid ${CREAM}`,
+                                  background: PALE, color: ROSE, fontSize: 10, fontWeight: 700,
+                                  cursor: 'pointer', fontFamily: 'Montserrat, sans-serif',
+                                }}>+{n}</button>
+                            ))}
+
+                            {/* Stock input */}
+                            <input
+                              type="number" min="0"
+                              value={vDisplay}
+                              onChange={e => markVariantChange(pid, vName, e.target.value)}
+                              onBlur={() => saveProduct(product)}
+                              style={{
+                                width: 60, padding: '5px 7px',
+                                border: `1.5px solid ${vDirty ? ROSE : CREAM}`,
+                                borderRadius: 7, fontSize: 13, fontWeight: 800,
+                                fontFamily: 'Montserrat, sans-serif', color: DARK,
+                                outline: 'none', textAlign: 'center',
+                                background: vDirty ? PALE : '#fff',
+                              }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Save variants button */}
+                    {changes[pid]?.variants && Object.keys(changes[pid].variants).length > 0 && (
+                      <button onClick={() => saveProduct(product)} disabled={isSaving}
+                        style={{
+                          marginTop: 12, display: 'flex', alignItems: 'center', gap: 6,
+                          padding: '8px 18px', borderRadius: 8, border: 'none',
+                          background: `linear-gradient(135deg, ${ROSE}, #9d174d)`,
+                          color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                          fontFamily: 'Montserrat, sans-serif',
+                        }}>
+                        {isSaving
+                          ? <><RefreshCw size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> Saving...</>
+                          : <><Save size={13} /> Save All Variant Changes</>}
+                      </button>
+                    )}
+                  </div>
                 )}
-              </button>
+              </div>
             );
           })}
-
-          {/* Logout */}
-          <button className="admin-logout-btn" onClick={handleLogout} style={{ marginTop: 'auto' }}>
-            <LogOut size={15} />
-            <span>Sign Out</span>
-          </button>
-        </nav>
-
-        {/* User */}
-        <div className="admin-user-area">
-          <div className="admin-avatar">A</div>
-          <div>
-            <div className="admin-user-name">Admin</div>
-            <div className="admin-user-role">Owner</div>
-          </div>
         </div>
-      </aside>
+      )}
 
-      {/* Right side */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-
-        {/* Header */}
-        <header className="admin-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Hamburger (mobile) */}
-            <button
-              className="admin-icon-btn"
-              onClick={() => setSidebarOpen(s => !s)}
-              style={{ display: 'none' }}
-              id="admin-hamburger"
-            >
-              <Menu size={18} />
-            </button>
-
-            <div>
-              <div className="admin-page-title">{currentNav?.name || 'Dashboard'}</div>
-              <div className="admin-breadcrumb">
-                <Home size={11} />
-                <ChevronRight size={11} />
-                <span>{currentNav?.name || 'Dashboard'}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="admin-header-actions">
-            {pendingOrders > 0 && (
-              <button
-                className="admin-icon-btn"
-                title={`${pendingOrders} pending orders`}
-                onClick={() => navigate('orders')}
-                style={{ position: 'relative' }}
-              >
-                <Bell size={16} />
-                <span style={{
-                  position: 'absolute', top: '-4px', right: '-4px',
-                  background: ROSE, color: '#fff',
-                  borderRadius: '50%', width: '16px', height: '16px',
-                  fontSize: '0.6rem', fontWeight: 700,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {pendingOrders}
-                </span>
-              </button>
-            )}
-
-            <button className="admin-icon-btn" title="Go to website" onClick={() => window.open('https://sirajcare.com', '_blank')}>
-              <Search size={16} />
-            </button>
-
-            <div style={{
-              width: '32px', height: '32px', borderRadius: '50%',
-              background: `linear-gradient(135deg, ${PINK}, #fb7185)`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontWeight: 700, fontSize: '0.82rem',
-            }}>
-              A
-            </div>
-          </div>
-        </header>
-
-        {/* Page content */}
-        <main className="admin-main">
-          {renderPage()}
-        </main>
-      </div>
-
-      {/* Show hamburger on mobile via CSS */}
-      <style>{`
-        @media (max-width: 768px) {
-          #admin-hamburger { display: flex !important; }
-        }
-      `}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
-};
-
-export { AdminDashboard };
+}

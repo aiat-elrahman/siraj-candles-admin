@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Package, ShoppingCart, Truck, Tag, LifeBuoy, Grid,
   Menu, X, LogOut, BarChart3, Image, Bell, Search,
-  ChevronRight, Home, Star , Upload , Calendar, ShoppingBag, Package
+  ChevronRight, Home, Star , Upload , Calendar, ShoppingBag, Layers
 } from 'lucide-react';
 import ProductManager from './pages/ProductManager';
 import OrderManager from './pages/OrderManager';
@@ -44,7 +44,7 @@ const NAV = [
   { id: 'reviews',    name: 'Reviews',         icon: Star },
   { id: 'bulk',       name: 'Bulk Upload',     icon: Upload },
   { id: 'bazaar',     name: ' Bazaar',         icon: ShoppingBag },
-  { id: 'stock',      name: ' Stock',       icon: Package }
+  { id: 'stock',      name: ' Stock',       icon: Layers }
 
 ];
 

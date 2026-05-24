@@ -385,7 +385,7 @@ export default function StockManager() {
                   {!hasVariants && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                       {/* Quick add buttons */}
-                      {[10, 20, 50].map(n => (
+                      {[1, 2, 5].map(n => (
                         <button key={n} onClick={() => { quickAdd(product, n); setTimeout(() => saveProduct(product), 200); }}
                           style={{
                             padding: '4px 8px', borderRadius: 6, border: `1px solid ${CREAM}`,
@@ -482,7 +482,7 @@ export default function StockManager() {
                             </div>
 
                             {/* Quick add for variant */}
-                            {[5, 10].map(n => (
+                            {[1, 2].map(n => (
                               <button key={n}
                                 onClick={() => { quickAddVariant(product, vName, variant.stock, n); setTimeout(() => saveProduct(product), 200); }}
                                 style={{

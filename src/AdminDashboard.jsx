@@ -1,70 +1,59 @@
+
 import React, { useState, useEffect } from 'react';
 import {
-  Package, ShoppingCart, Truck, Tag, LifeBuoy, Grid,
+  Package, ShoppingCart, Truck, Tag, Grid,
   Menu, X, LogOut, BarChart3, Image, Bell, Search,
-  ChevronRight, Home, Star , Upload , Calendar, ShoppingBag, Layers
+  ChevronRight, Home, Star, Calendar, ShoppingBag
 } from 'lucide-react';
-import ProductManager from './pages/ProductManager';
+import ProductsHub from './pages/ProductsHub';
 import OrderManager from './pages/OrderManager';
 import ShippingManager from './pages/ShippingManager';
 import DiscountManager from './pages/DiscountManager';
-import CareManager from './pages/CareManager';
 import CategoryManager from './pages/CategoryManager';
 import HomepageManager from './pages/HomepageManager';
 import Analytics from './pages/Analytics';
-import BulkUploadManager from './pages/BulkUploadManager';
 import ReviewManager from './pages/ReviewManager';
-import ContentPlanner from './pages/ContentPlanner';
 import BazaarPOS from './pages/BazaarPOS';
-import StockManager from './pages/Stockmanager';
 
-
-// ── Design tokens matching the ERP ──────────────────────────────────────────
-const DARK    = '#1E1023';
-const PINK    = '#F472B6';
-const ROSE    = '#BE185D';
-const PALE    = '#FFF0F6';
-const MID     = '#6B4A6E';
-const LIGHT   = '#D8B4D8';
-const CREAM   = '#FCE7F3';
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const DARK  = '#1E1023';
+const PINK  = '#F472B6';
+const ROSE  = '#BE185D';
+const PALE  = '#FFF0F6';
+const MID   = '#6B4A6E';
+const LIGHT = '#D8B4D8';
+const CREAM = '#FCE7F3';
 
 const API_BASE_URL = 'https://siraj-backend.onrender.com';
 
-// ── Sidebar nav items ────────────────────────────────────────────────────────
+// ── Sidebar nav ───────────────────────────────────────────────────────────────
 const NAV = [
-  { id: 'analytics',  name: 'Dashboard',      icon: BarChart3 },
-  { id: 'products',   name: 'Products',        icon: Package },
-  { id: 'orders',     name: 'Orders',          icon: ShoppingCart },
-  { id: 'categories', name: 'Categories',      icon: Grid },
-  { id: 'discounts',  name: 'Discounts',       icon: Tag },
-  { id: 'shipping',   name: 'Shipping',        icon: Truck },
-  { id: 'care',       name: 'Product Care',    icon: LifeBuoy },
-  {id: 'content',     name: 'Content Planner', icon: Calendar },
-  { id: 'homepage',    name: 'Homepage',       icon: Image },
-  { id: 'reviews',    name: 'Reviews',         icon: Star },
-  { id: 'bulk',       name: 'Bulk Upload',     icon: Upload },
-  { id: 'bazaar',     name: ' Bazaar',         icon: ShoppingBag },
-  { id: 'stock',      name: ' Stock',       icon: Layers }
-
+  { id: 'analytics',  name: 'Dashboard',       icon: BarChart3 },
+  { id: 'products',   name: 'Products',         icon: Package },
+  { id: 'orders',     name: 'Orders',           icon: ShoppingCart },
+  { id: 'categories', name: 'Categories',       icon: Grid },
+  { id: 'discounts',  name: 'Discounts',        icon: Tag },
+  { id: 'shipping',   name: 'Shipping',         icon: Truck },
+  { id: 'homepage',   name: 'Homepage',         icon: Image },
+  { id: 'reviews',    name: 'Reviews',          icon: Star },
+  { id: 'bazaar',     name: 'Bazaar',           icon: ShoppingBag },
 ];
 
-// ── Inject shared admin CSS once ─────────────────────────────────────────────
+// ── Shared CSS ────────────────────────────────────────────────────────────────
 const ADMIN_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap');
 
   .admin-root * { box-sizing: border-box; }
   .admin-root { font-family: 'Montserrat', sans-serif; }
 
-  /* Sidebar */
   .admin-sidebar {
-    width: 240px; 
+    width: 240px;
     height: 100vh;
     position: sticky; top: 0;
     background: ${DARK};
     display: flex; flex-direction: column;
     flex-shrink: 0; z-index: 10;
   }
-  
   .admin-logo-area {
     padding: 24px 20px;
     border-bottom: 1px solid rgba(255,255,255,0.08);
@@ -79,7 +68,11 @@ const ADMIN_CSS = `
     color: ${LIGHT}; letter-spacing: 0.18em;
     text-transform: uppercase; margin-top: 2px;
   }
-  .admin-nav { flex: 1; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto;}
+  .admin-nav {
+    flex: 1; padding: 12px 10px;
+    display: flex; flex-direction: column; gap: 2px;
+    overflow-y: auto;
+  }
   .admin-nav::-webkit-scrollbar { width: 4px; }
   .admin-nav::-webkit-scrollbar-track { background: transparent; }
   .admin-nav::-webkit-scrollbar-thumb { background: ${MID}; border-radius: 10px; }
@@ -108,8 +101,7 @@ const ADMIN_CSS = `
     width: 34px; height: 34px; border-radius: 50%;
     background: linear-gradient(135deg, ${PINK}, #fb7185);
     display: flex; align-items: center; justify-content: center;
-    color: #fff; font-weight: 700; font-size: 0.85rem;
-    flex-shrink: 0;
+    color: #fff; font-weight: 700; font-size: 0.85rem; flex-shrink: 0;
   }
   .admin-user-name { color: #fff; font-size: 0.82rem; font-weight: 600; }
   .admin-user-role { color: ${LIGHT}; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; }
@@ -119,12 +111,10 @@ const ADMIN_CSS = `
     padding: 9px 14px; border-radius: 8px;
     color: ${LIGHT}; font-size: 0.82rem; font-weight: 500;
     cursor: pointer; border: none; background: none;
-    width: 100%; transition: all 0.2s;
-    margin-top: 4px;
+    width: 100%; transition: all 0.2s; margin-top: 4px;
   }
   .admin-logout-btn:hover { background: rgba(244,63,94,0.12); color: #f87171; }
 
-  /* Header */
   .admin-header {
     height: 64px; background: #fff;
     border-bottom: 1px solid #fce7f3;
@@ -136,7 +126,6 @@ const ADMIN_CSS = `
   .admin-page-title {
     font-family: 'Cormorant Garamond', serif;
     font-size: 1.4rem; font-weight: 700; color: ${DARK};
-    letter-spacing: 0.01em;
   }
   .admin-breadcrumb {
     display: flex; align-items: center; gap: 6px;
@@ -147,30 +136,24 @@ const ADMIN_CSS = `
     width: 36px; height: 36px; border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
     border: 1px solid ${CREAM}; background: ${PALE};
-    color: ${MID}; cursor: pointer;
-    transition: all 0.2s;
+    color: ${MID}; cursor: pointer; transition: all 0.2s;
   }
   .admin-icon-btn:hover { background: ${CREAM}; color: ${ROSE}; border-color: #f9a8d4; }
 
-  /* Main content area */
   .admin-main { flex: 1; background: ${PALE}; overflow-y: auto; padding: 28px; }
 
-  /* Override component cards to match theme */
+  /* Component theme overrides */
   .admin-main .bg-white {
     border: 1px solid rgba(244,114,182,0.15) !important;
     box-shadow: 0 2px 16px rgba(190,24,93,0.06) !important;
     border-radius: 16px !important;
   }
   .admin-main thead.text-xs th,
-  .admin-main thead th {
-    background: #fdf2f8 !important;
-    color: ${MID} !important;
-  }
+  .admin-main thead th { background: #fdf2f8 !important; color: ${MID} !important; }
   .admin-main .bg-indigo-600,
   .admin-main .bg-indigo-700 { background: linear-gradient(135deg, ${ROSE}, #9d174d) !important; }
   .admin-main .hover\\:bg-indigo-700:hover { background: #9d174d !important; }
   .admin-main .text-indigo-600 { color: ${ROSE} !important; }
-  .admin-main .border-indigo-500,
   .admin-main .focus\\:border-indigo-500:focus { border-color: #f9a8d4 !important; }
   .admin-main .focus\\:ring-indigo-500:focus { --tw-ring-color: rgba(244,114,182,0.25) !important; }
   .admin-main .bg-indigo-50 { background: ${PALE} !important; }
@@ -178,28 +161,24 @@ const ADMIN_CSS = `
   .admin-main .border-indigo-600 { border-color: ${ROSE} !important; }
   .admin-main .bg-indigo-100 { background: ${CREAM} !important; }
 
-  /* Mobile overlay */
   .admin-mobile-overlay {
     position: fixed; inset: 0; background: rgba(30,16,35,0.6);
-    backdrop-filter: blur(3px); z-index: 9;
-    display: none;
+    backdrop-filter: blur(3px); z-index: 9; display: none;
   }
   .admin-mobile-overlay.visible { display: block; }
   .admin-sidebar.mobile-open { position: fixed; left: 0; top: 0; z-index: 10; height: 100vh; }
 
-  /* Login page */
+  /* Login */
   .admin-login-wrap {
     min-height: 100vh; background: ${DARK};
-    display: flex; align-items: center; justify-content: center;
-    padding: 2rem;
-    background-image: radial-gradient(circle at 20% 80%, rgba(244,114,182,0.12) 0%, transparent 50%),
-                      radial-gradient(circle at 80% 20%, rgba(190,24,93,0.08) 0%, transparent 50%);
+    display: flex; align-items: center; justify-content: center; padding: 2rem;
+    background-image:
+      radial-gradient(circle at 20% 80%, rgba(244,114,182,0.12) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(190,24,93,0.08) 0%, transparent 50%);
   }
   .admin-login-card {
-    background: rgba(255,255,255,0.97);
-    border-radius: 20px;
-    padding: 40px 36px;
-    width: 100%; max-width: 400px;
+    background: rgba(255,255,255,0.97); border-radius: 20px;
+    padding: 40px 36px; width: 100%; max-width: 400px;
     box-shadow: 0 24px 64px rgba(0,0,0,0.4);
   }
   .admin-login-logo {
@@ -209,9 +188,8 @@ const ADMIN_CSS = `
     text-align: center; margin-bottom: 4px;
   }
   .admin-login-sub {
-    text-align: center; color: ${MID};
-    font-size: 0.82rem; margin-bottom: 28px;
-    text-transform: uppercase; letter-spacing: 0.12em;
+    text-align: center; color: ${MID}; font-size: 0.82rem;
+    margin-bottom: 28px; text-transform: uppercase; letter-spacing: 0.12em;
   }
   .admin-login-label {
     display: block; font-size: 0.72rem; font-weight: 700;
@@ -222,9 +200,7 @@ const ADMIN_CSS = `
     width: 100%; padding: 11px 14px;
     border: 1.5px solid #e5e7eb; border-radius: 10px;
     font-size: 0.9rem; font-family: 'Montserrat', sans-serif;
-    outline: none; color: ${DARK};
-    transition: border-color 0.2s;
-    margin-bottom: 16px;
+    outline: none; color: ${DARK}; transition: border-color 0.2s; margin-bottom: 16px;
   }
   .admin-login-input:focus { border-color: ${PINK}; box-shadow: 0 0 0 3px rgba(244,114,182,0.12); }
   .admin-login-btn {
@@ -235,8 +211,7 @@ const ADMIN_CSS = `
     font-family: 'Montserrat', sans-serif;
     letter-spacing: 0.06em; text-transform: uppercase;
     box-shadow: 0 4px 16px rgba(244,114,182,0.35);
-    transition: all 0.2s;
-    margin-top: 4px;
+    transition: all 0.2s; margin-top: 4px;
   }
   .admin-login-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(244,114,182,0.45); }
   .admin-login-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
@@ -247,11 +222,9 @@ const ADMIN_CSS = `
   }
 
   @media (max-width: 768px) {
-    .admin-sidebar { 
+    .admin-sidebar {
       position: fixed !important;
-      left: 0; top: 0;
-      width: 240px; 
-      height: 100vh;
+      left: 0; top: 0; width: 240px; height: 100vh;
       transform: translateX(-100%);
       transition: transform 0.3s ease;
       z-index: 200;
@@ -266,15 +239,15 @@ const ADMIN_CSS = `
   }
 `;
 
-// ── Main component ───────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────────
 const AdminDashboard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername]   = useState('');
-  const [password, setPassword]   = useState('');
-  const [loginError, setLoginError] = useState('');
-  const [activePage, setActivePage] = useState('analytics');
+  const [username,    setUsername]    = useState('');
+  const [password,    setPassword]    = useState('');
+  const [loginError,  setLoginError]  = useState('');
+  const [activePage,  setActivePage]  = useState('analytics');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [loading, setLoading]     = useState(false);
+  const [loading,     setLoading]     = useState(false);
   const [pendingOrders, setPendingOrders] = useState(0);
 
   // Inject CSS once
@@ -293,10 +266,12 @@ const AdminDashboard = () => {
     if (token) verifyToken(token);
   }, []);
 
-  // Fetch pending order count for badge
+  // Pending orders badge
   useEffect(() => {
     if (!isAuthenticated) return;
-    fetch(`${API_BASE_URL}/api/orders`)
+    fetch(`${API_BASE_URL}/api/orders`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+    })
       .then(r => r.json())
       .then(data => {
         const orders = Array.isArray(data) ? data : [];
@@ -308,7 +283,7 @@ const AdminDashboard = () => {
   const verifyToken = async (token) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/admin/verify`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) setIsAuthenticated(true);
       else localStorage.removeItem('adminToken');
@@ -342,71 +317,47 @@ const AdminDashboard = () => {
     setActivePage('analytics');
   };
 
-  const navigate = (id) => {
-    setActivePage(id);
-    setSidebarOpen(false);
-  };
+  const navigate = (id) => { setActivePage(id); setSidebarOpen(false); };
 
   const renderPage = () => {
     switch (activePage) {
-      case 'products':   return <ProductManager />;
+      case 'products':   return <ProductsHub />;
       case 'orders':     return <OrderManager />;
       case 'shipping':   return <ShippingManager />;
       case 'discounts':  return <DiscountManager />;
-      case 'care':       return <CareManager />;
       case 'categories': return <CategoryManager />;
-      case 'homepage': return <HomepageManager />;
+      case 'homepage':   return <HomepageManager />;
       case 'analytics':  return <Analytics />;
-      case 'reviews': return <ReviewManager />;
-      case 'content':    return <ContentPlanner />;
-      case 'bulk': return <BulkUploadManager/>;
-      case 'bazaar': return <BazaarPOS />;
-      case 'stock': return <StockManager />;
+      case 'reviews':    return <ReviewManager />;
+      case 'bazaar':     return <BazaarPOS />;
       default:           return <Analytics />;
     }
   };
 
   const currentNav = NAV.find(n => n.id === activePage);
 
-  // ── LOGIN SCREEN ───────────────────────────────────────────────────────────
+  // ── LOGIN ──────────────────────────────────────────────────────────────────
   if (!isAuthenticated) {
     return (
       <div className="admin-login-wrap">
         <div className="admin-login-card">
           <div className="admin-login-logo">Siraj</div>
           <div className="admin-login-sub">Admin Dashboard</div>
-
           {loginError && <div className="admin-login-error">{loginError}</div>}
-
           <form onSubmit={handleLogin}>
             <label className="admin-login-label">Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              className="admin-login-input"
-              placeholder="Enter your username"
-              required
-              disabled={loading}
-              autoComplete="username"
-            />
+            <input type="text" value={username} onChange={e => setUsername(e.target.value)}
+              className="admin-login-input" placeholder="Enter your username"
+              required disabled={loading} autoComplete="username" />
             <label className="admin-login-label">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="admin-login-input"
-              placeholder="Enter your password"
-              required
-              disabled={loading}
-              autoComplete="current-password"
-            />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+              className="admin-login-input" placeholder="Enter your password"
+              required disabled={loading} autoComplete="current-password" />
             <button type="submit" disabled={loading} className="admin-login-btn">
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
-
-          <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '0.75rem', color: MID }}>
+          <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.75rem', color: MID }}>
             Secure admin access · Siraj Candles
           </p>
         </div>
@@ -426,13 +377,11 @@ const AdminDashboard = () => {
 
       {/* Sidebar */}
       <aside className={`admin-sidebar ${sidebarOpen ? 'mobile-open' : ''}`}>
-        {/* Logo */}
         <div className="admin-logo-area">
           <div className="admin-logo-name">Siraj</div>
           <div className="admin-logo-sub">Candles & Care · Admin</div>
         </div>
 
-        {/* Nav */}
         <nav className="admin-nav">
           {NAV.map(item => {
             const Icon = item.icon;
@@ -447,31 +396,21 @@ const AdminDashboard = () => {
                 <span>{item.name}</span>
                 {item.id === 'orders' && pendingOrders > 0 && (
                   <span style={{
-                    marginLeft: 'auto',
-                    background: PINK,
-                    color: '#fff',
-                    borderRadius: '20px',
-                    padding: '1px 8px',
-                    fontSize: '0.68rem',
-                    fontWeight: 700,
-                    minWidth: '20px',
-                    textAlign: 'center',
-                  }}>
-                    {pendingOrders}
-                  </span>
+                    marginLeft: 'auto', background: PINK, color: '#fff',
+                    borderRadius: 20, padding: '1px 8px',
+                    fontSize: '0.68rem', fontWeight: 700,
+                  }}>{pendingOrders}</span>
                 )}
               </button>
             );
           })}
 
-          {/* Logout */}
           <button className="admin-logout-btn" onClick={handleLogout} style={{ marginTop: 'auto' }}>
             <LogOut size={15} />
             <span>Sign Out</span>
           </button>
         </nav>
 
-        {/* User */}
         <div className="admin-user-area">
           <div className="admin-avatar">A</div>
           <div>
@@ -486,8 +425,7 @@ const AdminDashboard = () => {
 
         {/* Header */}
         <header className="admin-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Hamburger (mobile) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button
               className="admin-icon-btn"
               onClick={() => setSidebarOpen(s => !s)}
@@ -496,7 +434,6 @@ const AdminDashboard = () => {
             >
               <Menu size={18} />
             </button>
-
             <div>
               <div className="admin-page-title">{currentNav?.name || 'Dashboard'}</div>
               <div className="admin-breadcrumb">
@@ -509,47 +446,35 @@ const AdminDashboard = () => {
 
           <div className="admin-header-actions">
             {pendingOrders > 0 && (
-              <button
-                className="admin-icon-btn"
-                title={`${pendingOrders} pending orders`}
-                onClick={() => navigate('orders')}
-                style={{ position: 'relative' }}
-              >
+              <button className="admin-icon-btn" title={`${pendingOrders} pending orders`}
+                onClick={() => navigate('orders')} style={{ position: 'relative' }}>
                 <Bell size={16} />
                 <span style={{
-                  position: 'absolute', top: '-4px', right: '-4px',
-                  background: ROSE, color: '#fff',
-                  borderRadius: '50%', width: '16px', height: '16px',
-                  fontSize: '0.6rem', fontWeight: 700,
+                  position: 'absolute', top: -4, right: -4,
+                  background: ROSE, color: '#fff', borderRadius: '50%',
+                  width: 16, height: 16, fontSize: '0.6rem', fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {pendingOrders}
-                </span>
+                }}>{pendingOrders}</span>
               </button>
             )}
-
-            <button className="admin-icon-btn" title="Go to website" onClick={() => window.open('https://sirajcare.com', '_blank')}>
+            <button className="admin-icon-btn" title="View website"
+              onClick={() => window.open('https://sirajcare.com', '_blank')}>
               <Search size={16} />
             </button>
-
             <div style={{
-              width: '32px', height: '32px', borderRadius: '50%',
+              width: 32, height: 32, borderRadius: '50%',
               background: `linear-gradient(135deg, ${PINK}, #fb7185)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#fff', fontWeight: 700, fontSize: '0.82rem',
-            }}>
-              A
-            </div>
+            }}>A</div>
           </div>
         </header>
 
-        {/* Page content */}
         <main className="admin-main">
           {renderPage()}
         </main>
       </div>
 
-      {/* Show hamburger on mobile via CSS */}
       <style>{`
         @media (max-width: 768px) {
           #admin-hamburger { display: flex !important; }

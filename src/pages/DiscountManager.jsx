@@ -43,7 +43,10 @@ const DiscountManager = () => {
 
     const fetchDiscounts = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/api/discounts`);
+            const token = localStorage.getItem('adminToken');
+            const res = await fetch(`${API_BASE_URL}/api/discounts`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             if (res.ok) setDiscounts(await res.json());
         } catch { setMessage('Error loading discounts'); }
         finally { setIsLoading(false); }
@@ -111,7 +114,10 @@ const DiscountManager = () => {
                 : `${API_BASE_URL}/api/discounts`;
             const res = await fetch(url, {
                 method: editingDiscount ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                },
                 body: JSON.stringify(payload)
             });
             if (res.ok) {
@@ -129,7 +135,10 @@ const DiscountManager = () => {
     const handleDelete = async (id) => {
         if (!window.confirm('Delete this discount?')) return;
         try {
-            await fetch(`${API_BASE_URL}/api/discounts/${id}`, { method: 'DELETE' });
+            await fetch(`${API_BASE_URL}/api/discounts/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+            });
             setMessage('Deleted.'); await fetchDiscounts();
         } catch { setMessage('Error deleting'); }
     };

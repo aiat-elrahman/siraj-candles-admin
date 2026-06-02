@@ -385,7 +385,7 @@ const ProductManager = () => {
             subcategory: formData.subcategory,
             price_egp: formData.price_egp, // Base price for Single products
             stock: formData.stock,
-            stockOnline: formData.stockOnline,       
+            stockOnline: formData.stockOnline, 
             stockSabeel: formData.stockSabeel,     
             stockCloudsTex: formData.stockCloudsTex,
             status: formData.status,

@@ -114,11 +114,12 @@ export default function StockManager({ readOnly = false, userStore = null }) {
     return true;
   });
 
-  const renderStockInput = (product, variantName, location) => {
+ const renderStockInput = (product, variantName, location) => {
     const value = getStock(product, variantName, location);
     const colors = LOC_COLORS[location];
     const savingKey = product._id + '_' + (variantName || '') + '_' + location;
     const isSaving = saving[savingKey];
+
     return (
       <div style={{ textAlign: 'center', minWidth: 80 }}>
         <div style={{ fontSize: '0.7rem', fontWeight: 700, color: colors.text, marginBottom: 4 }}>{colors.label}</div>
@@ -136,14 +137,18 @@ export default function StockManager({ readOnly = false, userStore = null }) {
             onChange={(e) => {
               if (readOnly) return;
               const newVal = e.target.value;
+              
+              // FIX: Map the UI location to the actual database property name
+              const dbField = location === 'online' ? 'stockOnline' : location === 'sabeel' ? 'stockSabeel' : 'stockCloudsTex';
+
               // optimistic update
               setProducts(prev => prev.map(p => {
                 if (p._id !== product._id) return p;
                 if (variantName) {
-                  const newVariants = p.variants.map(v => v.variantName === variantName ? { ...v, [location]: parseInt(newVal) || 0 } : v);
+                  const newVariants = p.variants.map(v => v.variantName === variantName ? { ...v, [dbField]: parseInt(newVal) || 0 } : v);
                   return { ...p, variants: newVariants };
                 } else {
-                  return { ...p, [location]: parseInt(newVal) || 0 };
+                  return { ...p, [dbField]: parseInt(newVal) || 0 };
                 }
               }));
             }}

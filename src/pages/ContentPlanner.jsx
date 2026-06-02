@@ -84,7 +84,7 @@ const getFirstDay    = (y, m) => new Date(y, m, 1).getDay();
 // ─────────────────────────────────────────────
 // API CALLS
 // ─────────────────────────────────────────────
-const getToken = () => localStorage.getItem('sirajAdminToken');
+const getToken = () => localStorage.getItem('adminToken');
 
 const apiFetch = async (path, options = {}) => {
   const token = getToken();

@@ -383,11 +383,14 @@ const ProductManager = () => {
             productType: formData.productType,
             category: formData.category,
             subcategory: formData.subcategory,
-            price_egp: formData.price_egp, // Base price for Single products
+            price_egp: formData.price_egp, 
             stock: formData.stock,
-            stockOnline: formData.stockOnline, 
-            stockSabeel: formData.stockSabeel,     
-            stockCloudsTex: formData.stockCloudsTex,
+            
+            // ✅ FIX: Automatically mirror Base Stock to Online Stock for new products
+            stockOnline: (formData.stock > 0 && !formData.stockOnline) ? formData.stock : (formData.stockOnline || 0),
+            stockSabeel: formData.stockSabeel || 0,
+            stockCloudsTex: formData.stockCloudsTex || 0,
+            
             status: formData.status,
             featured: formData.featured,
             description_en: formData.description_en,
@@ -411,7 +414,12 @@ const ProductManager = () => {
             typeOptions: formData.typeOptions.join(', '),
             shapeOptions: formData.shapeOptions.join(', '),
             keyIngredients: formData.keyIngredients.join(', '),
-            variants: formData.variants,
+            variants: formData.variants.map(v => ({
+                ...v,
+                stockOnline: (v.stock > 0 && !v.stockOnline) ? v.stock : (v.stockOnline || 0),
+                stockSabeel: v.stockSabeel || 0,
+                stockCloudsTex: v.stockCloudsTex || 0
+            })),
         };
 
         if (formData.productType === 'Single') {
@@ -454,7 +462,11 @@ const ProductManager = () => {
         const method = isEditing ? 'PUT' : 'POST';
 
         try {
-            const response = await fetch(url, { method, body: data });
+            const response = await fetch(url, { 
+    method, 
+    headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` },
+    body: data 
+});
             const result = await response.json();
             if (response.ok && result.success) {
                 const name = result.product?.name_en || result.product?.bundleName || 'product';
@@ -503,7 +515,10 @@ const ProductManager = () => {
         if (!window.confirm(`Delete "${productName}"? This cannot be undone.`)) return;
         setIsSubmitting(true);
         try {
-            const response = await fetch(`${API_BASE_URL}/api/products/${productId}`, { method: 'DELETE' });
+            const response = await fetch(`${API_BASE_URL}/api/products/${productId}`, { 
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+});
             const result = await response.json();
             if (response.ok && result.success) {
                 setMessage(`✅ "${productName}" deleted.`);

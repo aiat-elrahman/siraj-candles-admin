@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Package, ShoppingCart, Truck, Tag, Grid,
   Menu, X, LogOut, BarChart3, Image, Bell, Search,
-  ChevronRight, Home, Star, ShoppingBag, Layers, Upload, Calendar
+  ChevronRight, Home, Star, ShoppingBag, Layers, Upload, Calendar, Users
 } from 'lucide-react';
 import ProductsHub      from './pages/ProductsHub';
 import OrderManager     from './pages/OrderManager';
@@ -16,6 +16,7 @@ import ReviewManager    from './pages/ReviewManager';
 import BazaarPOS        from './pages/BazaarPOS';
 import StockManager     from './pages/Stockmanager';
 import ContentPlanner   from './pages/ContentPlanner';
+import EmployeeManager  from './pages/EmployeeManager';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const DARK  = '#1E1023';
@@ -39,6 +40,7 @@ const ALL_NAV = [
   { id: 'homepage',   name: 'Homepage',    icon: Image       },
   { id: 'reviews',    name: 'Reviews',     icon: Star        },
   { id: 'content',    name: 'Content Planner', icon: Calendar },
+  { id: 'employees',  name: 'Employees',   icon: Users       },
   { id: 'bazaar',     name: 'Bazaar',      icon: ShoppingBag },
   { id: 'stock',      name: 'Stock',       icon: Layers      },
 ];
@@ -398,6 +400,7 @@ const AdminDashboard = () => {
       case 'homepage':   return <HomepageManager />;
       case 'reviews':    return <ReviewManager />;
       case 'content':    return <ContentPlanner />;
+      case 'employees':  return <EmployeeManager />;
       case 'bazaar':     return <BazaarPOS userRole={userRole} userStore={userStore} />;
       case 'stock':      return (
         <StockManager

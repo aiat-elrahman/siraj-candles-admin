@@ -109,7 +109,10 @@ const CategoryManager = () => {
                 : `${API_BASE_URL}/api/categories`;
             const res = await fetch(url, {
                 method: editingCategory ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                },
                 body: JSON.stringify(formData)
             });
             if (res.ok) {
@@ -128,7 +131,10 @@ const CategoryManager = () => {
     const handleDelete = async (id) => {
         if (!window.confirm('Delete this category?')) return;
         try {
-            await fetch(`${API_BASE_URL}/api/categories/${id}`, { method: 'DELETE' });
+            await fetch(`${API_BASE_URL}/api/categories/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+            });
             setMessage('Deleted'); await fetchCategories();
         } catch { setMessage('Error deleting'); }
     };
@@ -154,9 +160,13 @@ const CategoryManager = () => {
         if (newIndex < 0 || newIndex >= categories.length) return;
         const cat1 = categories[currentIndex];
         const cat2 = categories[newIndex];
+        const authHeaders = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        };
         await Promise.all([
-            fetch(`${API_BASE_URL}/api/categories/${cat1._id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...cat1, sortOrder: cat2.sortOrder }) }),
-            fetch(`${API_BASE_URL}/api/categories/${cat2._id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...cat2, sortOrder: cat1.sortOrder }) })
+            fetch(`${API_BASE_URL}/api/categories/${cat1._id}`, { method: 'PUT', headers: authHeaders, body: JSON.stringify({ ...cat1, sortOrder: cat2.sortOrder }) }),
+            fetch(`${API_BASE_URL}/api/categories/${cat2._id}`, { method: 'PUT', headers: authHeaders, body: JSON.stringify({ ...cat2, sortOrder: cat1.sortOrder }) })
         ]);
         await fetchCategories();
     };

@@ -41,7 +41,9 @@ const OrderManager = () => {
   const fetchOrders = useCallback(async () => {
     setMessage('');
     try {
-      const res = await fetch(`${API_BASE_URL}/api/orders`);
+     const res = await fetch(`${API_BASE_URL}/api/orders`, {
+  headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+});
       if (!res.ok) throw new Error(res.statusText);
       const data = await res.json();
       setOrders(Array.isArray(data) ? data : []);
@@ -61,10 +63,13 @@ const OrderManager = () => {
     setIsSubmitting(true);
     try {
       const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
-      });
+  method: 'PUT',
+  headers: { 
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${localStorage.getItem('adminToken')}` 
+  },
+  body: JSON.stringify({ status: newStatus })
+});
       const result = await res.json();
       if (res.ok) {
         await fetchOrders();

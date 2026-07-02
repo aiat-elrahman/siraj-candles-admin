@@ -338,7 +338,7 @@ const HomepageManager = () => {
                 { key: 'products',   label: 'Products',    href: 'products.html' },
                 { key: 'bundles',    label: 'Bundles',     href: 'bundles.html' },
                 { key: 'trackOrder', label: 'Track Order', href: 'order-tracking.html' },
-                { key: 'stores',     label: 'Our Stores',  href: 'stores.html', badge: 'New' },
+                { key: 'stores',     label: 'Our Stores',  href: 'Stores.html', badge: 'New' },
               ].map(link => (
                 <div key={link.key} className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-3">

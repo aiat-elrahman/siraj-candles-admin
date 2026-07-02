@@ -409,6 +409,77 @@ const HomepageManager = () => {
         )}
       </Section>
 
+      {/* ── WHATSAPP ORDER CONFIRMATION ── */}
+      <Section title="WhatsApp Order Message" icon="📱">
+        {settings ? (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">
+              This message is sent to the customer after they place an order.
+              Use <code className="bg-pink-50 text-pink-700 px-1 rounded">{'{{name}}'}</code>,{' '}
+              <code className="bg-pink-50 text-pink-700 px-1 rounded">{'{{orderId}}'}</code>,{' '}
+              <code className="bg-pink-50 text-pink-700 px-1 rounded">{'{{total}}'}</code>,{' '}
+              <code className="bg-pink-50 text-pink-700 px-1 rounded">{'{{items}}'}</code> as placeholders.
+            </p>
+
+            {/* WhatsApp phone number */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Your WhatsApp Number (with country code)
+              </label>
+              <input
+                type="text"
+                value={settings.whatsappPhone || ''}
+                onChange={e => setSettings(prev => ({ ...prev, whatsappPhone: e.target.value }))}
+                placeholder="+201001775793"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-pink-400"
+              />
+              <p className="text-xs text-gray-400 mt-1">This is YOUR number — customers will message you here.</p>
+            </div>
+
+            {/* Message template */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Message Template
+              </label>
+              <textarea
+                value={settings.whatsappOrderTemplate || ''}
+                onChange={e => setSettings(prev => ({ ...prev, whatsappOrderTemplate: e.target.value }))}
+                rows={14}
+                dir="auto"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-pink-400 font-mono leading-relaxed"
+                placeholder="Type your WhatsApp message here..."
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                {(settings.whatsappOrderTemplate || '').length} characters
+              </p>
+            </div>
+
+            {/* Live preview */}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <p className="text-xs font-semibold text-green-700 mb-2">📱 Preview (with sample data):</p>
+              <pre className="text-xs text-green-900 whitespace-pre-wrap font-sans leading-relaxed">
+                {(settings.whatsappOrderTemplate || '')
+                  .replace(/\{\{name\}\}/g, 'سارة')
+                  .replace(/\{\{orderId\}\}/g, '#A1B2C3D4')
+                  .replace(/\{\{total\}\}/g, '450')
+                  .replace(/\{\{items\}\}/g, '• شمعة Mason Jar (Rose Vanilla) × 1\n• Reed Diffuser (Oud) × 1')
+                  .replace(/\{\{city\}\}/g, 'Cairo')}
+              </pre>
+            </div>
+
+            <button
+              onClick={saveSettings}
+              disabled={settingsSaving}
+              className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium"
+            >
+              {settingsSaving ? 'Saving...' : '💾 Save WhatsApp Settings'}
+            </button>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400 italic">Loading settings...</p>
+        )}
+      </Section>
+
       {/* ── STORE LOCATIONS ── */}
       <Section title="Store Locations" icon="📍">
         <div className="space-y-4">

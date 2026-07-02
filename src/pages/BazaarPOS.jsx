@@ -1057,7 +1057,7 @@ export default function BazaarPOS({ userRole = 'admin', userStore = null }) {
                 );
               })}
             </div>
-            <button onClick={finalizeBundleConfiguration} style={{ width: '100%', padding: '12px 0', background: `linear-gradient(135deg, ${PINK}, ${ROSE})`, color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight, fontWeight: 700, cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <button onClick={finalizeBundleConfiguration} style={{ width: '100%', padding: '12px 0', background: `linear-gradient(135deg, ${PINK}, ${ROSE})`, color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               <Check size={16} /> Confirm Bundle
             </button>
           </div>

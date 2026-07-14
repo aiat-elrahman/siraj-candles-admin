@@ -89,6 +89,9 @@ const initialProductState = {
     category: '',
     subcategory: '',
     price_egp: 0,
+    salePrice: 0,
+    pairedProductId: null,
+    pairedProductName: '',
     stock: 0,
     stockOnline: 0,    
     stockSabeel: 0,    
@@ -142,6 +145,8 @@ const ProductManager = () => {
     const [productSearch, setProductSearch] = useState({});
     const [searchResults, setSearchResults] = useState({});
     const [searchLoading, setSearchLoading] = useState({});
+    const [pairedSearch, setPairedSearch] = useState('');
+    const [pairedSearchResults, setPairedSearchResults] = useState([]);
     const [cropImage, setCropImage] = useState(null);
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
@@ -352,6 +357,30 @@ const ProductManager = () => {
         });
     };
 
+    const handlePairedSearch = async (query) => {
+        setPairedSearch(query);
+        if (!query || query.length < 2) { setPairedSearchResults([]); return; }
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/products?limit=20&search=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            setPairedSearchResults((data.results || []).filter(p => p._id !== formData._id));
+        } catch (e) { console.error(e); }
+    };
+
+    const linkPairedProduct = (product) => {
+        setFormData(prev => ({
+            ...prev,
+            pairedProductId: product._id,
+            pairedProductName: product.name_en || product.bundleName || product.name || '',
+        }));
+        setPairedSearch('');
+        setPairedSearchResults([]);
+    };
+
+    const unlinkPairedProduct = () => {
+        setFormData(prev => ({ ...prev, pairedProductId: null, pairedProductName: '' }));
+    };
+
     const handleVariantChange = useCallback((index, field, value) => {
         setFormData(prev => {
             const v = [...prev.variants];
@@ -384,6 +413,8 @@ const ProductManager = () => {
             category: formData.category,
             subcategory: formData.subcategory,
             price_egp: formData.price_egp, 
+            salePrice: parseFloat(formData.salePrice) || 0,
+            pairedProduct: formData.pairedProductId || null,
             stock: formData.stock,
             
             // ✅ FIX: Automatically mirror Base Stock to Online Stock for new products
@@ -506,7 +537,20 @@ const ProductManager = () => {
             imagePaths: p.imagePaths || [],
             variants: p.variants || [],
             bundlePrice: p.bundlePrice || p.price_egp || 0,
+            salePrice: p.salePrice || 0,
+            pairedProductId: (p.pairedProduct && p.pairedProduct._id) || p.pairedProduct || null,
+            pairedProductName: (p.pairedProduct && p.pairedProduct.name_en) || '',
         });
+        // If pairedProduct wasn't populated by the list endpoint, look up its name for display
+        const pairedId = (p.pairedProduct && p.pairedProduct._id) || p.pairedProduct || null;
+        if (pairedId && !(p.pairedProduct && p.pairedProduct.name_en)) {
+            fetch(`${API_BASE_URL}/api/products/${pairedId}`)
+                .then(res => res.ok ? res.json() : null)
+                .then(data => {
+                    if (data) setFormData(prev => ({ ...prev, pairedProductName: data.name_en || data.bundleName || '' }));
+                })
+                .catch(() => {});
+        }
         setIsEditing(true);
         setMessage('Editing product. Upload images only to ADD new ones.');
     };
@@ -683,12 +727,42 @@ const ProductManager = () => {
                                     <input type="number" value={formData.price_egp} onChange={handlePriceChange} required min="0" step="0.01" className="block w-full rounded-lg border-gray-300 shadow-sm p-3 border focus:border-indigo-500"/>
                                 </div>
                                 <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Sale Price (EGP) <span className="font-normal text-gray-400">— optional, shows SALE badge</span></label>
+                                    <input type="number" value={formData.salePrice} onChange={e => setFormData(p => ({ ...p, salePrice: parseFloat(e.target.value) || 0 }))} min="0" step="0.01" className="block w-full rounded-lg border-gray-300 shadow-sm p-3 border focus:border-indigo-500" placeholder="Leave 0 for no sale"/>
+                                </div>
+                                <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Base Stock <span className="text-red-500">*</span></label>
                                     <input type="number" value={formData.stock} onChange={handleStockChange} required min="0" className="block w-full rounded-lg border-gray-300 shadow-sm p-3 border focus:border-indigo-500"/>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
                                     <input type="text" name="size" value={formData.size} onChange={handleChange} className="block w-full rounded-lg border-gray-300 shadow-sm p-3 border focus:border-indigo-500" placeholder='e.g., "200 gm"'/>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Pairs Well With <span className="font-normal text-gray-400">— shown as an "Add to Cart" popup after this product is added</span></label>
+                                    {formData.pairedProductName ? (
+                                        <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                                            <span className="text-sm font-medium text-indigo-800 flex-1">✅ {formData.pairedProductName}</span>
+                                            <button type="button" onClick={unlinkPairedProduct} className="text-red-500 text-xs hover:underline">Remove</button>
+                                        </div>
+                                    ) : (
+                                        <div className="relative">
+                                            <input value={pairedSearch} onChange={e => handlePairedSearch(e.target.value)}
+                                                className="block w-full rounded-lg border-gray-300 shadow-sm p-3 border focus:border-indigo-500"
+                                                placeholder="Search for a product to suggest as a pairing..." />
+                                            {pairedSearchResults.length > 0 && (
+                                                <div className="absolute z-10 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-56 overflow-y-auto">
+                                                    {pairedSearchResults.map(p => (
+                                                        <button key={p._id} type="button" onClick={() => linkPairedProduct(p)}
+                                                            className="w-full flex items-center gap-3 px-3 py-2 hover:bg-indigo-50 text-left">
+                                                            <img src={p.imagePaths?.[0]} alt="" className="w-8 h-8 object-cover rounded" />
+                                                            <span className="text-sm text-gray-700">{p.name_en || p.bundleName}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </>
                         )}
@@ -901,6 +975,11 @@ const ProductManager = () => {
                                                     <span>
                                                         <span className="line-through text-gray-400 text-xs mr-1">{product.bundleOriginalPrice?.toFixed(0)}</span>
                                                         <span className="font-bold text-green-700">{product.bundlePrice?.toFixed(0)}</span>
+                                                    </span>
+                                                ) : product.salePrice > 0 && product.salePrice < product.price_egp ? (
+                                                    <span>
+                                                        <span className="line-through text-gray-400 text-xs mr-1">{product.price_egp?.toFixed(0)}</span>
+                                                        <span className="font-bold text-pink-700">{product.salePrice?.toFixed(0)}</span>
                                                     </span>
                                                 ) : product.price_egp?.toFixed(2)}
                                             </td>

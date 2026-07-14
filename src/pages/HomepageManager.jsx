@@ -37,13 +37,15 @@ const Toast = ({ message, type }) => {
 const HomepageManager = () => {
   const token = localStorage.getItem('adminToken');
 
-  // Hero state
-  const [hero, setHero] = useState({
-    backgroundImage: '', buttonText: 'Shop Now',
-    buttonLink: '/products.html', title: '', subtitle: ''
-  });
-  const [heroUploading, setHeroUploading] = useState(false);
+  // Hero state — now an array of unlimited slides
+  const [heroSlides, setHeroSlides] = useState([]);
+  const [autoplaySpeed, setAutoplaySpeed] = useState(5000);
+  const [heroUploadingIndex, setHeroUploadingIndex] = useState(null);
   const [heroSaving, setHeroSaving] = useState(false);
+
+  // Free gift product search state
+  const [giftProductSearch, setGiftProductSearch] = useState('');
+  const [giftSearchResults, setGiftSearchResults] = useState([]);
 
   // Site settings state (ribbon + nav + footer)
   const [settings, setSettings] = useState(null);
@@ -73,27 +75,56 @@ const HomepageManager = () => {
     fetchStores();
   }, []);
 
-  // ── Hero ──────────────────────────────────────────────────────────────────
+  // ── Hero (carousel) ──────────────────────────────────────────────────────
   const fetchHero = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/settings/hero`);
-      if (res.ok) setHero(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setHeroSlides(data.slides && data.slides.length > 0
+          ? data.slides
+          : [{ backgroundImage: '', title: '', subtitle: '', buttonText: 'Shop Now', buttonLink: '/products.html' }]);
+        setAutoplaySpeed(data.autoplaySpeed || 5000);
+      }
     } catch (e) { console.error(e); }
   };
 
-  const uploadHeroImage = async (e) => {
+  const uploadHeroImage = async (index, e) => {
     const file = e.target.files[0];
     if (!file) return;
-    setHeroUploading(true);
+    setHeroUploadingIndex(index);
     const fd = new FormData();
     fd.append('image', file);
     try {
       const res = await fetch(`${API_BASE_URL}/api/upload`, { method: 'POST', body: fd });
       const data = await res.json();
-      setHero(prev => ({ ...prev, backgroundImage: data.imageUrl }));
+      setHeroSlides(prev => prev.map((s, i) => i === index ? { ...s, backgroundImage: data.imageUrl } : s));
       showToast('Image uploaded!');
     } catch { showToast('Image upload failed', 'error'); }
-    finally { setHeroUploading(false); }
+    finally { setHeroUploadingIndex(null); }
+  };
+
+  const updateSlideField = (index, field, value) => {
+    setHeroSlides(prev => prev.map((s, i) => i === index ? { ...s, [field]: value } : s));
+  };
+
+  const addSlide = () => {
+    setHeroSlides(prev => [...prev, { backgroundImage: '', title: '', subtitle: '', buttonText: 'Shop Now', buttonLink: '/products.html' }]);
+  };
+
+  const removeSlide = (index) => {
+    if (heroSlides.length <= 1) { showToast('Keep at least one slide', 'error'); return; }
+    setHeroSlides(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const moveSlide = (index, dir) => {
+    const j = index + dir;
+    if (j < 0 || j >= heroSlides.length) return;
+    setHeroSlides(prev => {
+      const arr = [...prev];
+      [arr[index], arr[j]] = [arr[j], arr[index]];
+      return arr;
+    });
   };
 
   const saveHero = async () => {
@@ -102,9 +133,9 @@ const HomepageManager = () => {
       const res = await fetch(`${API_BASE_URL}/api/settings/hero`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(hero)
+        body: JSON.stringify({ slides: heroSlides, autoplaySpeed })
       });
-      if (res.ok) showToast('Hero section saved!');
+      if (res.ok) showToast('Hero carousel saved!');
       else showToast('Failed to save hero', 'error');
     } catch { showToast('Network error', 'error'); }
     finally { setHeroSaving(false); }
@@ -148,6 +179,57 @@ const HomepageManager = () => {
     if (j < 0 || j >= msgs.length) return;
     [msgs[i], msgs[j]] = [msgs[j], msgs[i]];
     setSettings(prev => ({ ...prev, ribbonMessages: msgs }));
+  };
+
+  // ── Free Gift ─────────────────────────────────────────────────────────────
+  const searchGiftProducts = async (query) => {
+    setGiftProductSearch(query);
+    if (!query || query.length < 2) { setGiftSearchResults([]); return; }
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/products?limit=20&search=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      setGiftSearchResults(data.results || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const addGiftProduct = (product) => {
+    setSettings(prev => ({
+      ...prev,
+      freeGift: {
+        ...(prev.freeGift || { enabled: false, threshold: 500 }),
+        giftProducts: [...(prev.freeGift?.giftProducts || []), product]
+      }
+    }));
+    setGiftProductSearch('');
+    setGiftSearchResults([]);
+  };
+
+  const removeGiftProduct = (id) => {
+    setSettings(prev => ({
+      ...prev,
+      freeGift: { ...prev.freeGift, giftProducts: (prev.freeGift?.giftProducts || []).filter(g => g._id !== id) }
+    }));
+  };
+
+  const saveFreeGift = async () => {
+    setSettingsSaving(true);
+    try {
+      const payload = {
+        freeGift: {
+          enabled: settings.freeGift?.enabled || false,
+          threshold: settings.freeGift?.threshold || 500,
+          giftProducts: (settings.freeGift?.giftProducts || []).map(g => g._id),
+        }
+      };
+      const res = await fetch(`${API_BASE_URL}/api/site-settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) { showToast('Free gift settings saved!'); fetchSettings(); }
+      else showToast('Failed to save', 'error');
+    } catch { showToast('Network error', 'error'); }
+    finally { setSettingsSaving(false); }
   };
 
   // ── Stores ────────────────────────────────────────────────────────────────
@@ -222,59 +304,146 @@ const HomepageManager = () => {
 
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Homepage Manager</h1>
 
-      {/* ── HERO SECTION ── */}
-      <Section title="Hero Banner" icon="🖼️" defaultOpen={true}>
+      {/* ── HERO CAROUSEL ── */}
+      <Section title="Hero Carousel" icon="🖼️" defaultOpen={true}>
         <div className="space-y-5">
-          {/* Image upload */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Background Image</label>
-            <div className="flex items-center gap-3">
-              <input type="file" accept="image/*" onChange={uploadHeroImage} className="hidden" id="hero-img-upload" />
-              <label htmlFor="hero-img-upload" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 cursor-pointer text-sm">
-                <Upload className="w-4 h-4" /> {heroUploading ? 'Uploading...' : 'Upload Image'}
-              </label>
-              {hero.backgroundImage && (
-                <button onClick={() => setHero(p => ({ ...p, backgroundImage: '' }))} className="text-red-500 text-sm hover:underline">Remove</button>
-              )}
-            </div>
-            {hero.backgroundImage && <img src={hero.backgroundImage} alt="Hero" className="mt-3 w-full max-h-48 object-cover rounded-lg border" />}
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Autoplay Speed (ms per slide)</label>
+            <input type="number" value={autoplaySpeed} min={2000} step={500}
+              onChange={e => setAutoplaySpeed(parseInt(e.target.value) || 5000)}
+              className="w-40 px-3 py-2 border rounded-lg text-sm" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Title (optional)</label>
-              <input value={hero.title || ''} onChange={e => setHero(p => ({ ...p, title: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Illuminate Your Space" />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Subtitle (optional)</label>
-              <input value={hero.subtitle || ''} onChange={e => setHero(p => ({ ...p, subtitle: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Handcrafted with love" />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Button Text</label>
-              <input value={hero.buttonText || ''} onChange={e => setHero(p => ({ ...p, buttonText: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg text-sm" />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Button Link</label>
-              <input value={hero.buttonLink || ''} onChange={e => setHero(p => ({ ...p, buttonLink: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="/products.html" />
-            </div>
+
+          <div className="space-y-4">
+            {heroSlides.map((slide, index) => (
+              <div key={index} className="border rounded-xl p-4 bg-gray-50 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-gray-700 text-sm">Slide {index + 1}</span>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => moveSlide(index, -1)} disabled={index === 0} className="text-gray-400 hover:text-gray-600 disabled:opacity-30 text-xs px-1">▲</button>
+                    <button onClick={() => moveSlide(index, 1)} disabled={index === heroSlides.length - 1} className="text-gray-400 hover:text-gray-600 disabled:opacity-30 text-xs px-1">▼</button>
+                    <button onClick={() => removeSlide(index)} className="text-red-400 hover:text-red-600 ml-2"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Background Image</label>
+                  <div className="flex items-center gap-3">
+                    <input type="file" accept="image/*" onChange={e => uploadHeroImage(index, e)} className="hidden" id={`hero-img-upload-${index}`} />
+                    <label htmlFor={`hero-img-upload-${index}`} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 cursor-pointer text-sm">
+                      <Upload className="w-4 h-4" /> {heroUploadingIndex === index ? 'Uploading...' : 'Upload Image'}
+                    </label>
+                    {slide.backgroundImage && (
+                      <button onClick={() => updateSlideField(index, 'backgroundImage', '')} className="text-red-500 text-sm hover:underline">Remove</button>
+                    )}
+                  </div>
+                  {slide.backgroundImage && <img src={slide.backgroundImage} alt="Slide" className="mt-3 w-full max-h-48 object-cover rounded-lg border" />}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Title (optional)</label>
+                    <input value={slide.title || ''} onChange={e => updateSlideField(index, 'title', e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Illuminate Your Space" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Subtitle (optional)</label>
+                    <input value={slide.subtitle || ''} onChange={e => updateSlideField(index, 'subtitle', e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Handcrafted with love" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Button Text</label>
+                    <input value={slide.buttonText || ''} onChange={e => updateSlideField(index, 'buttonText', e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Button Link</label>
+                    <input value={slide.buttonLink || ''} onChange={e => updateSlideField(index, 'buttonLink', e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="/products.html" />
+                  </div>
+                </div>
+
+                {/* Live preview */}
+                <div className="relative h-40 rounded-lg overflow-hidden bg-gray-200"
+                  style={slide.backgroundImage ? { backgroundImage: `url(${slide.backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
+                  <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center gap-2">
+                    {slide.title && <p className="text-white font-bold text-lg text-center px-2">{slide.title}</p>}
+                    {slide.subtitle && <p className="text-white text-sm text-center px-2">{slide.subtitle}</p>}
+                    <span className="px-4 py-1 bg-white text-gray-800 rounded text-sm font-semibold">{slide.buttonText || 'Shop Now'}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-          {/* Live preview */}
-          <div className="relative h-48 rounded-lg overflow-hidden bg-gray-200"
-            style={hero.backgroundImage ? { backgroundImage: `url(${hero.backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
-            <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center gap-2">
-              {hero.title && <p className="text-white font-bold text-xl text-center">{hero.title}</p>}
-              {hero.subtitle && <p className="text-white text-sm text-center">{hero.subtitle}</p>}
-              <span className="px-4 py-1 bg-white text-gray-800 rounded text-sm font-semibold">{hero.buttonText || 'Shop Now'}</span>
-            </div>
-          </div>
+
+          <button onClick={addSlide} className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">
+            <Plus className="w-4 h-4" /> Add Slide
+          </button>
+
           <button onClick={saveHero} disabled={heroSaving} className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium">
             {heroSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {heroSaving ? 'Saving...' : 'Save Hero'}
+            {heroSaving ? 'Saving...' : 'Save Carousel'}
           </button>
         </div>
+      </Section>
+
+      {/* ── FREE GIFT THRESHOLD ── */}
+      <Section title="Free Gift Threshold" icon="🎁">
+        {settings && (
+          <div className="space-y-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={settings.freeGift?.enabled || false}
+                onChange={e => setSettings(p => ({ ...p, freeGift: { ...p.freeGift, enabled: e.target.checked } }))}
+                className="w-4 h-4 rounded" />
+              <span className="text-sm font-medium text-gray-700">Enable free gift progress bar</span>
+            </label>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Spend Threshold (EGP)</label>
+              <input type="number" min={0} value={settings.freeGift?.threshold ?? 500}
+                onChange={e => setSettings(p => ({ ...p, freeGift: { ...p.freeGift, threshold: parseFloat(e.target.value) || 0 } }))}
+                className="w-40 px-3 py-2 border rounded-lg text-sm" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Gift Product(s) <span className="font-normal text-gray-400">— 1 product auto-adds to cart; 2+ lets the customer choose</span>
+              </label>
+              <div className="space-y-2 mb-3">
+                {(settings.freeGift?.giftProducts || []).map(g => (
+                  <div key={g._id} className="flex items-center gap-3 bg-gray-50 px-3 py-2 rounded-lg">
+                    <img src={g.imagePaths?.[0]} alt="" className="w-8 h-8 object-cover rounded" />
+                    <span className="flex-1 text-sm text-gray-700">{g.name_en}</span>
+                    <button onClick={() => removeGiftProduct(g._id)} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                ))}
+                {(!settings.freeGift?.giftProducts || settings.freeGift.giftProducts.length === 0) && (
+                  <p className="text-gray-400 text-sm italic">No gift products yet. Search and add below.</p>
+                )}
+              </div>
+              <div className="relative">
+                <input value={giftProductSearch} onChange={e => searchGiftProducts(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Search products to add as a gift..." />
+                {giftSearchResults.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-56 overflow-y-auto">
+                    {giftSearchResults.map(p => (
+                      <button key={p._id} onClick={() => addGiftProduct(p)}
+                        className="w-full flex items-center gap-3 px-3 py-2 hover:bg-indigo-50 text-left">
+                        <img src={p.imagePaths?.[0]} alt="" className="w-8 h-8 object-cover rounded" />
+                        <span className="text-sm text-gray-700">{p.name_en || p.bundleName}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button onClick={saveFreeGift} disabled={settingsSaving} className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium">
+              {settingsSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {settingsSaving ? 'Saving...' : 'Save Free Gift'}
+            </button>
+          </div>
+        )}
       </Section>
 
       {/* ── ANNOUNCEMENT RIBBON ── */}

@@ -512,7 +512,36 @@ const HomepageManager = () => {
           </div>
         )}
       </Section>
+{/* ── TRACKING & ANALYTICS ── */}
+      <Section title="Tracking & Analytics" icon="📊">
+        {settings && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">Provide these IDs to your media buyer to track ad performance dynamically. No code changes required.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Meta Pixel ID</label>
+                <input value={settings.metaPixelId || ''} onChange={e => setSettings(p => ({ ...p, metaPixelId: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g. 123456789012345" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Google Analytics (GA4) ID</label>
+                <input value={settings.googleAnalyticsId || ''} onChange={e => setSettings(p => ({ ...p, googleAnalyticsId: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g. G-XXXXXXXXXX" />
+              </div>
+            </div>
+            
+            <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-sm text-indigo-800">
+               <span className="font-bold">Catalog Feed URL (For Facebook Dynamic Ads):</span><br/>
+               <a href="https://siraj-backend.onrender.com/api/products/catalog-feed.csv" target="_blank" className="underline text-indigo-600">https://siraj-backend.onrender.com/api/products/catalog-feed.csv</a>
+            </div>
 
+            <button onClick={saveSettings} disabled={settingsSaving} className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium">
+              {settingsSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {settingsSaving ? 'Saving...' : 'Save Tracking IDs'}
+            </button>
+          </div>
+        )}
+      </Section>
       {/* ── DYNAMIC HOMEPAGE BUILDER ── */}
       <Section title="Dynamic Homepage Builder" icon="🏗️">
         {settings && (

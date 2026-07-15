@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Upload, RefreshCw, Plus, Trash2, ChevronDown, ChevronUp, MapPin, Eye, EyeOff } from 'lucide-react';
+import { Save, Upload, RefreshCw, Plus, Trash2, ChevronDown, ChevronUp, MapPin, Eye, EyeOff, ArrowUp, ArrowDown } from 'lucide-react';
 
 const API_BASE_URL = 'https://siraj-backend.onrender.com';
 
@@ -37,7 +37,7 @@ const Toast = ({ message, type }) => {
 const HomepageManager = () => {
   const token = localStorage.getItem('adminToken');
 
-  // Hero state — now an array of unlimited slides
+  // Hero state
   const [heroSlides, setHeroSlides] = useState([]);
   const [autoplaySpeed, setAutoplaySpeed] = useState(5000);
   const [heroUploadingIndex, setHeroUploadingIndex] = useState(null);
@@ -47,15 +47,19 @@ const HomepageManager = () => {
   const [giftProductSearch, setGiftProductSearch] = useState('');
   const [giftSearchResults, setGiftSearchResults] = useState([]);
 
-  // Site settings state (ribbon + nav + footer)
+  // Site settings state (ribbon + nav + footer + favicon + dynamic sections)
   const [settings, setSettings] = useState(null);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [newRibbonMsg, setNewRibbonMsg] = useState('');
+  
+  // Uploading states for new features
+  const [faviconUploading, setFaviconUploading] = useState(false);
+  const [sectionUploadingIndex, setSectionUploadingIndex] = useState(null);
 
   // Stores state
   const [stores, setStores] = useState([]);
   const [storesSaving, setStoresSaving] = useState(false);
-  const [editingStore, setEditingStore] = useState(null); // null = add new
+  const [editingStore, setEditingStore] = useState(null); 
   const [showStoreForm, setShowStoreForm] = useState(false);
   const [storeForm, setStoreForm] = useState({
     name: '', address: '', phone: '', hours: '', mapsEmbedUrl: '', status: 'active', sortOrder: 0
@@ -141,7 +145,7 @@ const HomepageManager = () => {
     finally { setHeroSaving(false); }
   };
 
-  // ── Site Settings (ribbon + nav + footer) ─────────────────────────────────
+  // ── Site Settings ─────────────────────────────────────────────────────────
   const fetchSettings = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/site-settings`);
@@ -163,6 +167,93 @@ const HomepageManager = () => {
     finally { setSettingsSaving(false); }
   };
 
+  // ── Branding & Favicon ───────────────────────────────────────────────────
+  const uploadFavicon = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setFaviconUploading(true);
+    const fd = new FormData();
+    fd.append('image', file);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/upload`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (res.ok && data.imageUrl) {
+        setSettings(prev => ({ ...prev, faviconUrl: data.imageUrl }));
+        showToast('Favicon uploaded! Click save settings to apply.');
+      }
+    } catch { showToast('Upload failed', 'error'); }
+    finally { setFaviconUploading(false); }
+  };
+
+  // ── Dynamic Homepage Builder ──────────────────────────────────────────────
+  const addDynamicSection = () => {
+    setSettings(prev => ({
+      ...prev,
+      homepageSections: [
+        ...(prev.homepageSections || []),
+        {
+          type: 'custom_text_image',
+          isActive: true,
+          sortOrder: (prev.homepageSections?.length || 0),
+          headline: '',
+          subheadline: '',
+          bodyText: '',
+          imageUrl: '',
+          imageAlignment: 'center',
+          buttonText: '',
+          buttonLink: '',
+          backgroundColor: 'transparent'
+        }
+      ]
+    }));
+  };
+
+  const updateDynamicSection = (index, field, value) => {
+    setSettings(prev => {
+      const arr = [...(prev.homepageSections || [])];
+      arr[index] = { ...arr[index], [field]: value };
+      return { ...prev, homepageSections: arr };
+    });
+  };
+
+  const removeDynamicSection = (index) => {
+    if(!window.confirm("Are you sure you want to remove this section?")) return;
+    setSettings(prev => {
+      const arr = [...(prev.homepageSections || [])];
+      arr.splice(index, 1);
+      return { ...prev, homepageSections: arr };
+    });
+  };
+
+  const moveDynamicSection = (index, dir) => {
+    setSettings(prev => {
+      const arr = [...(prev.homepageSections || [])];
+      const targetIndex = index + dir;
+      if (targetIndex < 0 || targetIndex >= arr.length) return prev;
+      [arr[index], arr[targetIndex]] = [arr[targetIndex], arr[index]];
+      arr.forEach((sec, i) => sec.sortOrder = i);
+      return { ...prev, homepageSections: arr };
+    });
+  };
+
+  const uploadSectionImage = async (index, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setSectionUploadingIndex(index);
+    const fd = new FormData();
+    fd.append('image', file);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/upload`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if(res.ok) {
+        updateDynamicSection(index, 'imageUrl', data.imageUrl);
+        showToast('Section image uploaded!');
+      }
+    } catch { showToast('Image upload failed', 'error'); }
+    finally { setSectionUploadingIndex(null); }
+  };
+
+  // ── Ribbon Messages ───────────────────────────────────────────────────────
   const addRibbonMessage = () => {
     if (!newRibbonMsg.trim()) return;
     setSettings(prev => ({ ...prev, ribbonMessages: [...(prev.ribbonMessages || []), newRibbonMsg.trim()] }));
@@ -387,6 +478,166 @@ const HomepageManager = () => {
         </div>
       </Section>
 
+      {/* ── BRANDING & ASSETS ── */}
+      <Section title="Branding & Assets" icon="✨">
+        {settings && (
+          <div className="space-y-4">
+            <div className="border rounded-xl p-4 bg-gray-50">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Favicon (Website Icon)</label>
+              <p className="text-xs text-gray-500 mb-3">Upload a square image (.png or .ico) to appear in the browser tab.</p>
+              <div className="flex items-center gap-4">
+                {settings.faviconUrl ? (
+                  <div className="w-12 h-12 bg-white rounded border flex items-center justify-center overflow-hidden">
+                    <img src={settings.faviconUrl} alt="Favicon" className="w-8 h-8 object-contain" />
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 bg-gray-200 rounded border flex items-center justify-center text-gray-400 text-xs">No Icon</div>
+                )}
+                
+                <input type="file" accept="image/png, image/jpeg, image/x-icon" onChange={uploadFavicon} className="hidden" id="favicon-upload" />
+                <label htmlFor="favicon-upload" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 cursor-pointer text-sm">
+                  <Upload className="w-4 h-4" /> {faviconUploading ? 'Uploading...' : 'Upload Favicon'}
+                </label>
+                
+                {settings.faviconUrl && (
+                  <button onClick={() => setSettings(prev => ({...prev, faviconUrl: ''}))} className="text-red-500 text-sm hover:underline">Remove</button>
+                )}
+              </div>
+            </div>
+            
+            <button onClick={saveSettings} disabled={settingsSaving} className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium">
+              {settingsSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {settingsSaving ? 'Saving...' : 'Save Branding'}
+            </button>
+          </div>
+        )}
+      </Section>
+
+      {/* ── DYNAMIC HOMEPAGE BUILDER ── */}
+      <Section title="Dynamic Homepage Builder" icon="🏗️">
+        {settings && (
+          <div className="space-y-5">
+            <p className="text-sm text-gray-500 mb-4">Build and arrange sections for your "Affordable Luxury" homepage funnel.</p>
+            
+            <div className="space-y-4">
+              {(settings.homepageSections || []).sort((a,b) => a.sortOrder - b.sortOrder).map((section, index) => (
+                <div key={index} className={`border rounded-xl p-5 space-y-4 transition-all ${section.isActive ? 'bg-white border-indigo-100 shadow-sm' : 'bg-gray-100 border-gray-200 opacity-75'}`}>
+                  
+                  {/* Section Header Controls */}
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <div className="flex items-center gap-3">
+                      <select 
+                        value={section.type} 
+                        onChange={(e) => updateDynamicSection(index, 'type', e.target.value)}
+                        className="font-semibold text-indigo-700 bg-indigo-50 border-none rounded-md px-2 py-1 text-sm focus:ring-0"
+                      >
+                        <option value="trust">Trust Banner</option>
+                        <option value="about">About Siraj</option>
+                        <option value="collections">Shop Collections</option>
+                        <option value="bestsellers">Best Sellers Feed</option>
+                        <option value="why_siraj">Why Siraj (Icons)</option>
+                        <option value="reviews">Customer Reviews</option>
+                        <option value="bundle_promo">Self-Care Bundle Promo</option>
+                        <option value="scents">Behind The Scent</option>
+                        <option value="instagram">Instagram Feed</option>
+                        <option value="final_cta">Final Emotional CTA</option>
+                        <option value="custom_text_image">Custom Text & Image</option>
+                      </select>
+
+                      <label className="flex items-center gap-1.5 cursor-pointer bg-gray-100 px-2 py-1 rounded-md">
+                        <input type="checkbox" checked={section.isActive} onChange={(e) => updateDynamicSection(index, 'isActive', e.target.checked)} className="w-3.5 h-3.5 rounded text-indigo-600" />
+                        <span className="text-xs font-medium text-gray-600">{section.isActive ? 'Active' : 'Hidden'}</span>
+                      </label>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => moveDynamicSection(index, -1)} disabled={index === 0} className="p-1.5 text-gray-400 hover:text-indigo-600 disabled:opacity-30 rounded hover:bg-gray-100"><ArrowUp className="w-4 h-4" /></button>
+                      <button onClick={() => moveDynamicSection(index, 1)} disabled={index === (settings.homepageSections?.length || 0) - 1} className="p-1.5 text-gray-400 hover:text-indigo-600 disabled:opacity-30 rounded hover:bg-gray-100"><ArrowDown className="w-4 h-4" /></button>
+                      <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                      <button onClick={() => removeDynamicSection(index)} className="p-1.5 text-red-400 hover:text-red-600 rounded hover:bg-red-50"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  </div>
+
+                  {/* Section Content Fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Headline</label>
+                      <input value={section.headline} onChange={e => updateDynamicSection(index, 'headline', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g. Affordable Luxury, Every Day." />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Subheadline</label>
+                      <input value={section.subheadline} onChange={e => updateDynamicSection(index, 'subheadline', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g. Self-care essentials handcrafted..." />
+                    </div>
+                    
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Body Text (Optional)</label>
+                      <textarea value={section.bodyText} onChange={e => updateDynamicSection(index, 'bodyText', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm min-h-[80px]" placeholder="Extended text for About or Trust sections..." />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Button Text</label>
+                      <input value={section.buttonText} onChange={e => updateDynamicSection(index, 'buttonText', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g. Shop Now" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Button Link</label>
+                      <input value={section.buttonLink} onChange={e => updateDynamicSection(index, 'buttonLink', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g. /products.html" />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Image Alignment / Style</label>
+                      <select value={section.imageAlignment} onChange={e => updateDynamicSection(index, 'imageAlignment', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                        <option value="center">Centered</option>
+                        <option value="left">Image Left, Text Right</option>
+                        <option value="right">Text Left, Image Right</option>
+                        <option value="background">Full Background Cover</option>
+                        <option value="grid">Grid Pattern (For Collections)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Background Color</label>
+                      <div className="flex gap-2">
+                        <input type="color" value={section.backgroundColor === 'transparent' ? '#ffffff' : section.backgroundColor} onChange={e => updateDynamicSection(index, 'backgroundColor', e.target.value)} className="h-9 w-12 rounded border cursor-pointer" />
+                        <input type="text" value={section.backgroundColor} onChange={e => updateDynamicSection(index, 'backgroundColor', e.target.value)} className="flex-1 px-3 py-2 border rounded-lg text-sm" placeholder="#F8F4EF or transparent" />
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-2 border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50 flex items-center gap-4">
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Section Image</label>
+                        <input type="file" accept="image/*" onChange={e => uploadSectionImage(index, e)} className="hidden" id={`section-img-upload-${index}`} />
+                        <label htmlFor={`section-img-upload-${index}`} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 cursor-pointer text-xs font-medium">
+                          <Upload className="w-3.5 h-3.5" /> {sectionUploadingIndex === index ? 'Uploading...' : 'Upload Image'}
+                        </label>
+                        {section.imageUrl && (
+                          <button onClick={() => updateDynamicSection(index, 'imageUrl', '')} className="ml-3 text-red-500 text-xs hover:underline">Remove Image</button>
+                        )}
+                      </div>
+                      {section.imageUrl && (
+                        <div className="w-20 h-20 rounded-md overflow-hidden border border-gray-200 flex-shrink-0">
+                          <img src={section.imageUrl} alt="Section Visual" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button onClick={addDynamicSection} className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">
+              <Plus className="w-4 h-4" /> Add New Section
+            </button>
+
+            <div className="pt-4 border-t">
+              <button onClick={saveSettings} disabled={settingsSaving} className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium w-full md:w-auto justify-center">
+                {settingsSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {settingsSaving ? 'Saving Sections...' : 'Save Entire Layout'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Section>
+
       {/* ── FREE GIFT THRESHOLD ── */}
       <Section title="Free Gift Threshold" icon="🎁">
         {settings && (
@@ -590,7 +841,6 @@ const HomepageManager = () => {
               <code className="bg-pink-50 text-pink-700 px-1 rounded">{'{{items}}'}</code> as placeholders.
             </p>
 
-            {/* WhatsApp phone number */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Your WhatsApp Number (with country code)
@@ -605,7 +855,6 @@ const HomepageManager = () => {
               <p className="text-xs text-gray-400 mt-1">This is YOUR number — customers will message you here.</p>
             </div>
 
-            {/* Message template */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Message Template
@@ -623,7 +872,6 @@ const HomepageManager = () => {
               </p>
             </div>
 
-            {/* Live preview */}
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <p className="text-xs font-semibold text-green-700 mb-2">📱 Preview (with sample data):</p>
               <pre className="text-xs text-green-900 whitespace-pre-wrap font-sans leading-relaxed">
@@ -659,7 +907,6 @@ const HomepageManager = () => {
             </button>
           </div>
 
-          {/* Store list */}
           <div className="space-y-3">
             {stores.length === 0 && <p className="text-gray-400 text-sm italic text-center py-4">No stores yet. Add your first location.</p>}
             {stores.map(store => (
@@ -694,7 +941,6 @@ const HomepageManager = () => {
             ))}
           </div>
 
-          {/* Add / Edit store form */}
           {showStoreForm && (
             <div className="border-2 border-indigo-100 rounded-xl p-5 bg-indigo-50 space-y-4">
               <h3 className="font-semibold text-gray-800">{editingStore ? 'Edit Store' : 'Add New Store'}</h3>

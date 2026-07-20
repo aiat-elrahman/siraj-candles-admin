@@ -55,6 +55,15 @@ const HomepageManager = () => {
   // Uploading states for new features
   const [faviconUploading, setFaviconUploading] = useState(false);
   const [sectionUploadingIndex, setSectionUploadingIndex] = useState(null);
+  const [itemUploadingKey, setItemUploadingKey] = useState(null); // `${sectionIndex}-${itemIndex}`
+  const [categoryPreview, setCategoryPreview] = useState([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/categories`)
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setCategoryPreview(Array.isArray(data) ? data : []))
+      .catch(() => setCategoryPreview([]));
+  }, []);
 
   // Stores state
   const [stores, setStores] = useState([]);
@@ -202,7 +211,8 @@ const HomepageManager = () => {
           imageAlignment: 'center',
           buttonText: '',
           buttonLink: '',
-          backgroundColor: 'transparent'
+          backgroundColor: 'transparent',
+          items: []
         }
       ]
     }));
@@ -251,6 +261,50 @@ const HomepageManager = () => {
       }
     } catch { showToast('Image upload failed', 'error'); }
     finally { setSectionUploadingIndex(null); }
+  };
+
+  // ── Section sub-items (trust icons / instagram images / review quotes) ────
+  const addSectionItem = (sectionIndex, defaults = {}) => {
+    setSettings(prev => {
+      const arr = [...(prev.homepageSections || [])];
+      const items = [...(arr[sectionIndex].items || []), { icon: '', label: '', imageUrl: '', link: '', quote: '', author: '', rating: 5, ...defaults }];
+      arr[sectionIndex] = { ...arr[sectionIndex], items };
+      return { ...prev, homepageSections: arr };
+    });
+  };
+
+  const updateSectionItem = (sectionIndex, itemIndex, field, value) => {
+    setSettings(prev => {
+      const arr = [...(prev.homepageSections || [])];
+      const items = [...(arr[sectionIndex].items || [])];
+      items[itemIndex] = { ...items[itemIndex], [field]: value };
+      arr[sectionIndex] = { ...arr[sectionIndex], items };
+      return { ...prev, homepageSections: arr };
+    });
+  };
+
+  const removeSectionItem = (sectionIndex, itemIndex) => {
+    setSettings(prev => {
+      const arr = [...(prev.homepageSections || [])];
+      const items = (arr[sectionIndex].items || []).filter((_, i) => i !== itemIndex);
+      arr[sectionIndex] = { ...arr[sectionIndex], items };
+      return { ...prev, homepageSections: arr };
+    });
+  };
+
+  const uploadItemImage = async (sectionIndex, itemIndex, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const key = `${sectionIndex}-${itemIndex}`;
+    setItemUploadingKey(key);
+    const fd = new FormData();
+    fd.append('image', file);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/upload`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (res.ok) updateSectionItem(sectionIndex, itemIndex, 'imageUrl', data.imageUrl);
+    } catch { showToast('Image upload failed', 'error'); }
+    finally { setItemUploadingKey(null); }
   };
 
   // ── Ribbon Messages ───────────────────────────────────────────────────────
@@ -590,14 +644,117 @@ const HomepageManager = () => {
                   {/* Section Content Fields */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">Headline</label>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Headline (Optional)</label>
                       <input value={section.headline} onChange={e => updateDynamicSection(index, 'headline', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g. Affordable Luxury, Every Day." />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">Subheadline</label>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Subheadline (Optional)</label>
                       <input value={section.subheadline} onChange={e => updateDynamicSection(index, 'subheadline', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g. Self-care essentials handcrafted..." />
                     </div>
-                    
+
+                    {/* ── COLLECTIONS: live preview of your actual categories, nothing to configure ── */}
+                    {section.type === 'collections' && (
+                      <div className="md:col-span-2 border border-indigo-200 bg-indigo-50 rounded-lg p-4">
+                        <p className="text-xs font-semibold text-indigo-800 mb-2">
+                          🔗 This section automatically pulls from Category Manager — nothing to upload here.
+                        </p>
+                        {categoryPreview.length === 0 ? (
+                          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+                            No categories found yet. Go to <strong>Categories</strong> in the sidebar and add some with images first — this section will be empty until you do.
+                          </p>
+                        ) : (
+                          <div className="flex gap-3 overflow-x-auto pb-1">
+                            {categoryPreview.map(cat => (
+                              <div key={cat._id} className="flex-shrink-0 w-16 text-center">
+                                <img src={cat.image || ''} alt={cat.name} className="w-16 h-16 object-cover rounded-lg border bg-white" />
+                                <p className="text-[10px] text-gray-600 mt-1 truncate">{cat.name}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── BEST SELLERS: nothing to configure either, it's automatic ── */}
+                    {section.type === 'bestsellers' && (
+                      <div className="md:col-span-2 border border-indigo-200 bg-indigo-50 rounded-lg p-3">
+                        <p className="text-xs font-semibold text-indigo-800">
+                          🔗 This section automatically shows your featured, in-stock products — mark products "Featured" in Product Manager to include them here.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* ── TRUST / WHY SIRAJ: icon + label repeater ── */}
+                    {(section.type === 'trust' || section.type === 'why_siraj') && (
+                      <div className="md:col-span-2 border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-2">
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Icons Row</label>
+                        {(section.items || []).map((item, itemIndex) => (
+                          <div key={itemIndex} className="flex items-center gap-2">
+                            <input value={item.icon} onChange={e => updateSectionItem(index, itemIndex, 'icon', e.target.value)}
+                              className="w-16 px-2 py-2 border rounded-lg text-sm text-center" placeholder="🌿" />
+                            <input value={item.label} onChange={e => updateSectionItem(index, itemIndex, 'label', e.target.value)}
+                              className="flex-1 px-3 py-2 border rounded-lg text-sm" placeholder="e.g. 100% Natural Ingredients" />
+                            <button onClick={() => removeSectionItem(index, itemIndex)} className="p-2 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                          </div>
+                        ))}
+                        <button onClick={() => addSectionItem(index)} className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium mt-1">
+                          <Plus className="w-3.5 h-3.5" /> Add Icon
+                        </button>
+                        <p className="text-[11px] text-gray-400">Tip: paste an emoji (🌿 💚 ⏱️ ♻️ 🤍) into the icon box — no image upload needed.</p>
+                      </div>
+                    )}
+
+                    {/* ── INSTAGRAM: image + link repeater ── */}
+                    {section.type === 'instagram' && (
+                      <div className="md:col-span-2 border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-3">
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Instagram Images</label>
+                        {(section.items || []).map((item, itemIndex) => (
+                          <div key={itemIndex} className="flex items-center gap-3 bg-white border rounded-lg p-2">
+                            {item.imageUrl && <img src={item.imageUrl} alt="" className="w-12 h-12 object-cover rounded" />}
+                            <div className="flex-1 space-y-1">
+                              <input type="file" accept="image/*" onChange={e => uploadItemImage(index, itemIndex, e)} className="hidden" id={`item-img-${index}-${itemIndex}`} />
+                              <label htmlFor={`item-img-${index}-${itemIndex}`} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 border rounded text-xs cursor-pointer hover:bg-gray-200">
+                                <Upload className="w-3 h-3" /> {itemUploadingKey === `${index}-${itemIndex}` ? 'Uploading...' : (item.imageUrl ? 'Replace' : 'Upload')}
+                              </label>
+                              <input value={item.link} onChange={e => updateSectionItem(index, itemIndex, 'link', e.target.value)}
+                                className="w-full px-2 py-1.5 border rounded text-xs" placeholder="Link to Instagram post (optional)" />
+                            </div>
+                            <button onClick={() => removeSectionItem(index, itemIndex)} className="p-2 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                          </div>
+                        ))}
+                        <button onClick={() => addSectionItem(index)} className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                          <Plus className="w-3.5 h-3.5" /> Add Image
+                        </button>
+                      </div>
+                    )}
+
+                    {/* ── REVIEWS: quote + author + rating repeater ── */}
+                    {section.type === 'reviews' && (
+                      <div className="md:col-span-2 border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-2">
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Customer Quotes</label>
+                        {(section.items || []).map((item, itemIndex) => (
+                          <div key={itemIndex} className="bg-white border rounded-lg p-2 space-y-1.5">
+                            <div className="flex items-center gap-2">
+                              <textarea value={item.quote} onChange={e => updateSectionItem(index, itemIndex, 'quote', e.target.value)}
+                                className="flex-1 px-2 py-1.5 border rounded text-xs min-h-[50px]" placeholder="The candle smell is amazing..." />
+                              <button onClick={() => removeSectionItem(index, itemIndex)} className="p-2 text-red-400 hover:text-red-600 self-start"><Trash2 className="w-4 h-4" /></button>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <input value={item.author} onChange={e => updateSectionItem(index, itemIndex, 'author', e.target.value)}
+                                className="flex-1 px-2 py-1.5 border rounded text-xs" placeholder="— Sarah" />
+                              <select value={item.rating} onChange={e => updateSectionItem(index, itemIndex, 'rating', parseInt(e.target.value))} className="px-2 py-1.5 border rounded text-xs bg-white">
+                                {[5,4,3,2,1].map(n => <option key={n} value={n}>{'★'.repeat(n)}</option>)}
+                              </select>
+                            </div>
+                          </div>
+                        ))}
+                        <button onClick={() => addSectionItem(index)} className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                          <Plus className="w-3.5 h-3.5" /> Add Quote
+                        </button>
+                      </div>
+                    )}
+
+                    {/* ── Body text — useful for about/bundle_promo/scents/final_cta/custom, and as an intro line for trust/instagram/reviews ── */}
                     <div className="md:col-span-2">
                       <label className="block text-xs font-semibold text-gray-600 mb-1">Body Text (Optional)</label>
                       <textarea value={section.bodyText} onChange={e => updateDynamicSection(index, 'bodyText', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm min-h-[80px]" placeholder="Extended text for About or Trust sections..." />
@@ -612,41 +769,45 @@ const HomepageManager = () => {
                       <input value={section.buttonLink} onChange={e => updateDynamicSection(index, 'buttonLink', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g. /products.html" />
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">Image Alignment / Style</label>
-                      <select value={section.imageAlignment} onChange={e => updateDynamicSection(index, 'imageAlignment', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm bg-white">
-                        <option value="center">Centered</option>
-                        <option value="left">Image Left, Text Right</option>
-                        <option value="right">Text Left, Image Right</option>
-                        <option value="background">Full Background Cover</option>
-                        <option value="grid">Grid Pattern (For Collections)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">Background Color</label>
-                      <div className="flex gap-2">
-                        <input type="color" value={section.backgroundColor === 'transparent' ? '#ffffff' : section.backgroundColor} onChange={e => updateDynamicSection(index, 'backgroundColor', e.target.value)} className="h-9 w-12 rounded border cursor-pointer" />
-                        <input type="text" value={section.backgroundColor} onChange={e => updateDynamicSection(index, 'backgroundColor', e.target.value)} className="flex-1 px-3 py-2 border rounded-lg text-sm" placeholder="#F8F4EF or transparent" />
-                      </div>
-                    </div>
-
-                    <div className="md:col-span-2 border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50 flex items-center gap-4">
-                      <div className="flex-1">
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Section Image</label>
-                        <input type="file" accept="image/*" onChange={e => uploadSectionImage(index, e)} className="hidden" id={`section-img-upload-${index}`} />
-                        <label htmlFor={`section-img-upload-${index}`} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 cursor-pointer text-xs font-medium">
-                          <Upload className="w-3.5 h-3.5" /> {sectionUploadingIndex === index ? 'Uploading...' : 'Upload Image'}
-                        </label>
-                        {section.imageUrl && (
-                          <button onClick={() => updateDynamicSection(index, 'imageUrl', '')} className="ml-3 text-red-500 text-xs hover:underline">Remove Image</button>
-                        )}
-                      </div>
-                      {section.imageUrl && (
-                        <div className="w-20 h-20 rounded-md overflow-hidden border border-gray-200 flex-shrink-0">
-                          <img src={section.imageUrl} alt="Section Visual" className="w-full h-full object-cover" />
+                    {/* ── Image alignment + single image — only meaningful for text+image sections ── */}
+                    {!['collections', 'bestsellers', 'trust', 'why_siraj', 'instagram'].includes(section.type) && (
+                      <>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">Image Alignment / Style</label>
+                          <select value={section.imageAlignment} onChange={e => updateDynamicSection(index, 'imageAlignment', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                            <option value="center">Centered</option>
+                            <option value="left">Image Left, Text Right</option>
+                            <option value="right">Text Left, Image Right</option>
+                            <option value="background">Full Background Cover</option>
+                          </select>
                         </div>
-                      )}
-                    </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">Background Color</label>
+                          <div className="flex gap-2">
+                            <input type="color" value={section.backgroundColor === 'transparent' ? '#ffffff' : section.backgroundColor} onChange={e => updateDynamicSection(index, 'backgroundColor', e.target.value)} className="h-9 w-12 rounded border cursor-pointer" />
+                            <input type="text" value={section.backgroundColor} onChange={e => updateDynamicSection(index, 'backgroundColor', e.target.value)} className="flex-1 px-3 py-2 border rounded-lg text-sm" placeholder="#F8F4EF or transparent" />
+                          </div>
+                        </div>
+
+                        <div className="md:col-span-2 border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50 flex items-center gap-4">
+                          <div className="flex-1">
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Section Image</label>
+                            <input type="file" accept="image/*" onChange={e => uploadSectionImage(index, e)} className="hidden" id={`section-img-upload-${index}`} />
+                            <label htmlFor={`section-img-upload-${index}`} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 cursor-pointer text-xs font-medium">
+                              <Upload className="w-3.5 h-3.5" /> {sectionUploadingIndex === index ? 'Uploading...' : 'Upload Image'}
+                            </label>
+                            {section.imageUrl && (
+                              <button onClick={() => updateDynamicSection(index, 'imageUrl', '')} className="ml-3 text-red-500 text-xs hover:underline">Remove Image</button>
+                            )}
+                          </div>
+                          {section.imageUrl && (
+                            <div className="w-20 h-20 rounded-md overflow-hidden border border-gray-200 flex-shrink-0">
+                              <img src={section.imageUrl} alt="Section Visual" className="w-full h-full object-cover" />
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
 
                   </div>
                 </div>
@@ -850,6 +1011,34 @@ const HomepageManager = () => {
                 ))}
               </div>
             </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Footer Links <span className="font-normal text-gray-400">— Terms, Shipping, Returns, FAQ, etc.</span>
+              </label>
+              <div className="space-y-2">
+                {(settings.footerLinks || []).map((link, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input value={link.label} onChange={e => {
+                      const arr = [...(settings.footerLinks || [])];
+                      arr[i] = { ...arr[i], label: e.target.value };
+                      setSettings(p => ({ ...p, footerLinks: arr }));
+                    }} className="flex-1 px-3 py-2 border rounded-lg text-sm" placeholder="Label, e.g. FAQ" />
+                    <input value={link.url} onChange={e => {
+                      const arr = [...(settings.footerLinks || [])];
+                      arr[i] = { ...arr[i], url: e.target.value };
+                      setSettings(p => ({ ...p, footerLinks: arr }));
+                    }} className="flex-1 px-3 py-2 border rounded-lg text-sm" placeholder="/faq.html" />
+                    <button onClick={() => {
+                      setSettings(p => ({ ...p, footerLinks: (p.footerLinks || []).filter((_, j) => j !== i) }));
+                    }} className="p-2 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setSettings(p => ({ ...p, footerLinks: [...(p.footerLinks || []), { label: '', url: '' }] }))}
+                className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium mt-2">
+                <Plus className="w-3.5 h-3.5" /> Add Footer Link
+              </button>
+            </div>
             <button onClick={saveSettings} disabled={settingsSaving} className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium">
               {settingsSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {settingsSaving ? 'Saving...' : 'Save Footer'}
@@ -863,7 +1052,7 @@ const HomepageManager = () => {
         {settings ? (
           <div className="space-y-4">
             <p className="text-sm text-gray-500">
-              This message is sent to the customer after they place an order.
+              This template is used when you send a WhatsApp confirmation to a customer from the Orders page — it's no longer auto-sent to customers.
               Use <code className="bg-pink-50 text-pink-700 px-1 rounded">{'{{name}}'}</code>,{' '}
               <code className="bg-pink-50 text-pink-700 px-1 rounded">{'{{orderId}}'}</code>,{' '}
               <code className="bg-pink-50 text-pink-700 px-1 rounded">{'{{total}}'}</code>,{' '}

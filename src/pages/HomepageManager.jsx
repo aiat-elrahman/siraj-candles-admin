@@ -57,6 +57,8 @@ const HomepageManager = () => {
   const [sectionUploadingIndex, setSectionUploadingIndex] = useState(null);
   const [itemUploadingKey, setItemUploadingKey] = useState(null); // `${sectionIndex}-${itemIndex}`
   const [categoryPreview, setCategoryPreview] = useState([]);
+  const [bestsellerSearch, setBestsellerSearch] = useState({});       // keyed by section index
+  const [bestsellerSearchResults, setBestsellerSearchResults] = useState({}); // keyed by section index
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/categories`)
@@ -305,6 +307,26 @@ const HomepageManager = () => {
       if (res.ok) updateSectionItem(sectionIndex, itemIndex, 'imageUrl', data.imageUrl);
     } catch { showToast('Image upload failed', 'error'); }
     finally { setItemUploadingKey(null); }
+  };
+
+  // ── Manual Best Sellers picker ─────────────────────────────────────────
+  const searchBestsellerProducts = async (sectionIndex, query) => {
+    setBestsellerSearch(prev => ({ ...prev, [sectionIndex]: query }));
+    if (!query || query.length < 2) {
+      setBestsellerSearchResults(prev => ({ ...prev, [sectionIndex]: [] }));
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/products?limit=20&search=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      setBestsellerSearchResults(prev => ({ ...prev, [sectionIndex]: data.results || [] }));
+    } catch (e) { console.error(e); }
+  };
+
+  const addBestsellerProduct = (sectionIndex, product) => {
+    addSectionItem(sectionIndex, { productId: product._id, label: product.name_en || product.bundleName || '', imageUrl: product.imagePaths?.[0] || '' });
+    setBestsellerSearch(prev => ({ ...prev, [sectionIndex]: '' }));
+    setBestsellerSearchResults(prev => ({ ...prev, [sectionIndex]: [] }));
   };
 
   // ── Ribbon Messages ───────────────────────────────────────────────────────
@@ -675,12 +697,40 @@ const HomepageManager = () => {
                       </div>
                     )}
 
-                    {/* ── BEST SELLERS: nothing to configure either, it's automatic ── */}
+                    {/* ── BEST SELLERS: hand-pick specific products, or leave empty for automatic ── */}
                     {section.type === 'bestsellers' && (
-                      <div className="md:col-span-2 border border-indigo-200 bg-indigo-50 rounded-lg p-3">
-                        <p className="text-xs font-semibold text-indigo-800">
-                          🔗 This section automatically shows your featured, in-stock products — mark products "Featured" in Product Manager to include them here.
+                      <div className="md:col-span-2 border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-3">
+                        <p className="text-xs font-semibold text-indigo-800 bg-indigo-50 border border-indigo-200 rounded p-2">
+                          🔗 Pick specific products below to show exactly those, in this order. Leave empty to automatically show your Featured, in-stock products instead.
                         </p>
+
+                        {(section.items || []).filter(i => i.productId).length > 0 && (
+                          <div className="space-y-2">
+                            {(section.items || []).map((item, itemIndex) => item.productId ? (
+                              <div key={itemIndex} className="flex items-center gap-3 bg-white border rounded-lg p-2">
+                                {item.imageUrl && <img src={item.imageUrl} alt="" className="w-10 h-10 object-cover rounded" />}
+                                <span className="flex-1 text-sm text-gray-700">{item.label}</span>
+                                <button onClick={() => removeSectionItem(index, itemIndex)} className="p-2 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                              </div>
+                            ) : null)}
+                          </div>
+                        )}
+
+                        <div className="relative">
+                          <input value={bestsellerSearch[index] || ''} onChange={e => searchBestsellerProducts(index, e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Search products to feature here..." />
+                          {(bestsellerSearchResults[index] || []).length > 0 && (
+                            <div className="absolute z-10 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-56 overflow-y-auto">
+                              {bestsellerSearchResults[index].map(p => (
+                                <button key={p._id} onClick={() => addBestsellerProduct(index, p)}
+                                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-indigo-50 text-left">
+                                  <img src={p.imagePaths?.[0]} alt="" className="w-8 h-8 object-cover rounded" />
+                                  <span className="text-sm text-gray-700">{p.name_en || p.bundleName}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
 

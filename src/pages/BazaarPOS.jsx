@@ -349,8 +349,13 @@ export default function BazaarPOS({ userRole = 'admin', userStore = null }) {
       if (filterStatus !== 'All') params.push(`status=${filterStatus}`);
       const url = `${API}/api/bazaar${params.length ? '?' + params.join('&') : ''}`;
       const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      setSales(Array.isArray(await r.json()) ? await r.json() : []);
-    } catch (e) { console.error(e); }
+      const data = await r.json().catch(() => []);
+      if (!r.ok) throw new Error(data.message || 'Failed to load sales');
+      setSales(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+      setSales([]);
+    }
     finally { setLoadingSales(false); }
   }, [filterDay, filterEvent, filterStatus, token]);
 

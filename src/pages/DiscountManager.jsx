@@ -16,6 +16,7 @@ const emptyForm = {
     value: '',
     appliesTo: 'entire',
     categories: [],
+    subcategories: [],
     minOrderValue: '',
     maxUses: '',
     expiresAt: '',
@@ -27,6 +28,7 @@ const emptyForm = {
     getQuantity: 1,
     getDiscountPct: 100,
     buyxgetyCategory: '',
+    buyxgetySubcategory: '',
 };
 
 const DiscountManager = () => {
@@ -71,7 +73,17 @@ const DiscountManager = () => {
             ...prev,
             categories: prev.categories.includes(name)
                 ? prev.categories.filter(c => c !== name)
-                : [...prev.categories, name]
+                : [...prev.categories, name],
+            subcategories: [], // selection changed — clear, since subcategories belong to a specific category
+        }));
+    };
+
+    const toggleSubcategory = (name) => {
+        setFormData(prev => ({
+            ...prev,
+            subcategories: prev.subcategories.includes(name)
+                ? prev.subcategories.filter(s => s !== name)
+                : [...prev.subcategories, name]
         }));
     };
 
@@ -151,11 +163,13 @@ const DiscountManager = () => {
             maxUses: d.maxUses?.toString() || '',
             expiresAt: d.expiresAt ? d.expiresAt.substring(0, 10) : '',
             categories: d.categories || [],
+            subcategories: d.subcategories || [],
             buyQuantity: d.buyQuantity || 2,
             getQuantity: d.getQuantity || 1,
             getDiscountPct: d.getDiscountPct || 100,
             stackCap: d.stackCap || 30,
             buyxgetyCategory: d.buyxgetyCategory || '',
+            buyxgetySubcategory: d.buyxgetySubcategory || '',
         });
         setEditingDiscount(d); setShowForm(true);
     };
@@ -270,12 +284,31 @@ const DiscountManager = () => {
                                     </div>
                                     <div>
                                         <label className="block text-xs font-medium text-gray-700 mb-1">Applies to Category *</label>
-                                        <select value={formData.buyxgetyCategory} onChange={e => setFormData(p => ({ ...p, buyxgetyCategory: e.target.value }))} className="block w-full rounded-lg border-gray-300 p-3 border focus:border-indigo-500" required={isBuyXGetY}>
+                                        <select value={formData.buyxgetyCategory} onChange={e => setFormData(p => ({ ...p, buyxgetyCategory: e.target.value, buyxgetySubcategory: '' }))} className="block w-full rounded-lg border-gray-300 p-3 border focus:border-indigo-500" required={isBuyXGetY}>
                                             <option value="">Select category</option>
                                             <option value="all">All Categories</option>
                                             {categories.map(cat => <option key={cat._id} value={cat.name}>{cat.name}</option>)}
                                         </select>
                                     </div>
+                                    {formData.buyxgetyCategory && formData.buyxgetyCategory !== 'all' && (() => {
+                                        const cat = categories.find(c => c.name === formData.buyxgetyCategory);
+                                        const subs = cat?.subcategories || [];
+                                        if (subs.length === 0) return null;
+                                        return (
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                                    Narrow to Subcategory <span className="font-normal text-gray-400">(optional — leave blank for all of {formData.buyxgetyCategory})</span>
+                                                </label>
+                                                <select value={formData.buyxgetySubcategory} onChange={e => setFormData(p => ({ ...p, buyxgetySubcategory: e.target.value }))} className="block w-full rounded-lg border-gray-300 p-3 border focus:border-indigo-500">
+                                                    <option value="">Any subcategory</option>
+                                                    {subs.map((sub, i) => {
+                                                        const name = typeof sub === 'string' ? sub : sub.name;
+                                                        return <option key={i} value={name}>{name}</option>;
+                                                    })}
+                                                </select>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             )}
 
@@ -292,7 +325,7 @@ const DiscountManager = () => {
                                         ))}
                                     </div>
                                     {formData.appliesTo==='categories' && (
-                                        <div className="p-4 bg-white border border-indigo-100 rounded-lg">
+                                        <div className="p-4 bg-white border border-indigo-100 rounded-lg space-y-3">
                                             <div className="flex flex-wrap gap-2">
                                                 {categories.map(cat => (
                                                     <button key={cat._id} type="button" onClick={() => toggleCategory(cat.name)} className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${formData.categories.includes(cat.name) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'}`}>
@@ -300,6 +333,31 @@ const DiscountManager = () => {
                                                     </button>
                                                 ))}
                                             </div>
+                                            {formData.categories.length === 1 && (() => {
+                                                const cat = categories.find(c => c.name === formData.categories[0]);
+                                                const subs = cat?.subcategories || [];
+                                                if (subs.length === 0) return null;
+                                                return (
+                                                    <div className="pt-2 border-t border-gray-100">
+                                                        <label className="block text-xs font-medium text-gray-700 mb-2">
+                                                            Narrow to Subcategories <span className="font-normal text-gray-400">(optional — leave empty for all of {formData.categories[0]})</span>
+                                                        </label>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {subs.map((sub, i) => {
+                                                                const name = typeof sub === 'string' ? sub : sub.name;
+                                                                return (
+                                                                    <button key={i} type="button" onClick={() => toggleSubcategory(name)} className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${formData.subcategories.includes(name) ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-300 hover:border-purple-400'}`}>
+                                                                        {formData.subcategories.includes(name) ? '✓ ':''}{name}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
+                                            {formData.categories.length > 1 && formData.subcategories.length === 0 && (
+                                                <p className="text-xs text-gray-400 italic">Subcategory narrowing is only available when exactly one category is selected.</p>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -378,8 +436,8 @@ const DiscountManager = () => {
                                         <td className="px-4 py-3 font-mono font-bold text-gray-900 text-xs">{d.code}</td>
                                         <td className="px-4 py-3 text-indigo-700 font-medium text-xs">{formatValue(d)}</td>
                                         <td className="px-4 py-3 text-xs">
-                                            {d.type==='buyxgety' ? <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded-full">{d.buyxgetyCategory||'All'}</span>
-                                            : d.appliesTo==='categories' && d.categories?.length > 0 ? <span title={d.categories.join(', ')} className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full">{d.categories.length} cat.</span>
+                                            {d.type==='buyxgety' ? <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded-full">{d.buyxgetyCategory||'All'}{d.buyxgetySubcategory ? ` → ${d.buyxgetySubcategory}` : ''}</span>
+                                            : d.appliesTo==='categories' && d.categories?.length > 0 ? <span title={d.subcategories?.length ? `${d.categories.join(', ')} → ${d.subcategories.join(', ')}` : d.categories.join(', ')} className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full">{d.categories.length} cat.{d.subcategories?.length ? ` → ${d.subcategories.length} sub` : ''}</span>
                                             : <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full">Entire</span>}
                                         </td>
                                         <td className="px-4 py-3 text-xs">

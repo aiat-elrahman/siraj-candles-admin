@@ -59,6 +59,8 @@ const HomepageManager = () => {
   const [categoryPreview, setCategoryPreview] = useState([]);
   const [bestsellerSearch, setBestsellerSearch] = useState({});       // keyed by section index
   const [bestsellerSearchResults, setBestsellerSearchResults] = useState({}); // keyed by section index
+  const orderedHomepageSections = [...(settings?.homepageSections || [])]
+    .sort((first, second) => (first.sortOrder ?? 0) - (second.sortOrder ?? 0));
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/categories`)
@@ -172,8 +174,11 @@ const HomepageManager = () => {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(settings)
       });
-      if (res.ok) showToast('Settings saved!');
-      else showToast('Failed to save settings', 'error');
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data.settings);
+        showToast('Settings saved! You can return to edit or reorder any section anytime.');
+      } else showToast('Failed to save settings', 'error');
     } catch { showToast('Network error', 'error'); }
     finally { setSettingsSaving(false); }
   };
@@ -239,12 +244,19 @@ const HomepageManager = () => {
 
   const moveDynamicSection = (index, dir) => {
     setSettings(prev => {
-      const arr = [...(prev.homepageSections || [])];
-      const targetIndex = index + dir;
-      if (targetIndex < 0 || targetIndex >= arr.length) return prev;
-      [arr[index], arr[targetIndex]] = [arr[targetIndex], arr[index]];
-      arr.forEach((sec, i) => sec.sortOrder = i);
-      return { ...prev, homepageSections: arr };
+      const sections = prev.homepageSections || [];
+      const ordered = [...sections].sort((first, second) => (first.sortOrder ?? 0) - (second.sortOrder ?? 0));
+      const currentPosition = ordered.indexOf(sections[index]);
+      const targetPosition = currentPosition + dir;
+      if (currentPosition < 0 || targetPosition < 0 || targetPosition >= ordered.length) return prev;
+
+      [ordered[currentPosition], ordered[targetPosition]] = [ordered[targetPosition], ordered[currentPosition]];
+      const sortOrderBySection = new Map(ordered.map((section, position) => [section, position]));
+
+      return {
+        ...prev,
+        homepageSections: sections.map(section => ({ ...section, sortOrder: sortOrderBySection.get(section) }))
+      };
     });
   };
 
@@ -622,15 +634,18 @@ const HomepageManager = () => {
       <Section title="Dynamic Homepage Builder" icon="🏗️">
         {settings && (
           <div className="space-y-5">
-            <p className="text-sm text-gray-500 mb-4">Build and arrange sections for your "Affordable Luxury" homepage funnel.</p>
+            <p className="text-sm text-gray-500 mb-4">Build, edit, hide, and rearrange sections for your "Affordable Luxury" homepage funnel. Saving keeps every section available for future changes.</p>
             
             <div className="space-y-4">
-              {(settings.homepageSections || []).sort((a,b) => a.sortOrder - b.sortOrder).map((section, index) => (
-                <div key={index} className={`border rounded-xl p-5 space-y-4 transition-all ${section.isActive ? 'bg-white border-indigo-100 shadow-sm' : 'bg-gray-100 border-gray-200 opacity-75'}`}>
+              {orderedHomepageSections.map((section, position) => {
+                const index = (settings.homepageSections || []).indexOf(section);
+                return (
+                <div key={section._id || `new-section-${index}`} className={`border rounded-xl p-5 space-y-4 transition-all ${section.isActive ? 'bg-white border-indigo-100 shadow-sm' : 'bg-gray-100 border-gray-200 opacity-75'}`}>
                   
                   {/* Section Header Controls */}
                   <div className="flex items-center justify-between border-b pb-3">
                     <div className="flex items-center gap-3">
+                      <span className="text-xs font-bold text-gray-400">#{position + 1}</span>
                       <select 
                         value={section.type} 
                         onChange={(e) => updateDynamicSection(index, 'type', e.target.value)}
@@ -656,8 +671,8 @@ const HomepageManager = () => {
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <button onClick={() => moveDynamicSection(index, -1)} disabled={index === 0} className="p-1.5 text-gray-400 hover:text-indigo-600 disabled:opacity-30 rounded hover:bg-gray-100"><ArrowUp className="w-4 h-4" /></button>
-                      <button onClick={() => moveDynamicSection(index, 1)} disabled={index === (settings.homepageSections?.length || 0) - 1} className="p-1.5 text-gray-400 hover:text-indigo-600 disabled:opacity-30 rounded hover:bg-gray-100"><ArrowDown className="w-4 h-4" /></button>
+                      <button onClick={() => moveDynamicSection(index, -1)} disabled={position === 0} aria-label="Move section up" title="Move section up" className="p-1.5 text-gray-400 hover:text-indigo-600 disabled:opacity-30 rounded hover:bg-gray-100"><ArrowUp className="w-4 h-4" /></button>
+                      <button onClick={() => moveDynamicSection(index, 1)} disabled={position === orderedHomepageSections.length - 1} aria-label="Move section down" title="Move section down" className="p-1.5 text-gray-400 hover:text-indigo-600 disabled:opacity-30 rounded hover:bg-gray-100"><ArrowDown className="w-4 h-4" /></button>
                       <div className="w-px h-4 bg-gray-300 mx-1"></div>
                       <button onClick={() => removeDynamicSection(index)} className="p-1.5 text-red-400 hover:text-red-600 rounded hover:bg-red-50"><Trash2 className="w-4 h-4" /></button>
                     </div>
@@ -877,7 +892,7 @@ const HomepageManager = () => {
 
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
 
             <button onClick={addDynamicSection} className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">

@@ -261,10 +261,16 @@ function SaleRow({ sale, token, isAdmin, onEdit, onVoid, onExchange, onDelete, o
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
-export default function BazaarPOS({ userRole = 'admin', userStore = null }) {
+export default function BazaarPOS({ userRole = 'admin', userStore = null, locationScope = 'bazaar' }) {
   const token      = localStorage.getItem('adminToken');
   const isEmployee = userRole !== 'admin';
-  const storeLocation = isEmployee ? userStore : 'bazaar';
+  const storeLocation = isEmployee ? userStore : locationScope;
+  const isStorePos = storeLocation === 'sabeel' || storeLocation === 'clouds_tex';
+  const locationLabel = storeLocation === 'sabeel'
+    ? 'Sabeel Elrashad Store'
+    : storeLocation === 'clouds_tex'
+      ? 'Clouds Tex Store'
+      : 'Bazaar';
 
   // ── Products ──────────────────────────────────────────────────────────────
   const [products,    setProducts]    = useState([]);
@@ -280,7 +286,7 @@ export default function BazaarPOS({ userRole = 'admin', userStore = null }) {
   const [eventDates,      setEventDates]      = useState([]);
   const [currentDay,      setCurrentDay]      = useState('');
   const [pastEvents,      setPastEvents]      = useState([]);
-  const [showEventSetup,  setShowEventSetup]  = useState(!isEmployee);
+  const [showEventSetup,  setShowEventSetup]  = useState(!isStorePos);
 
   // ── Cart ──────────────────────────────────────────────────────────────────
   const [cart,            setCart]            = useState([]);
@@ -302,6 +308,7 @@ export default function BazaarPOS({ userRole = 'admin', userStore = null }) {
   const [filterEvent, setFilterEvent] = useState('All');
   const [filterStatus,setFilterStatus]= useState('All');
   const [loadingSales,setLoadingSales]= useState(true);
+  const [salesError,  setSalesError]  = useState('');
 
   // ── Modals ────────────────────────────────────────────────────────────────
   const [editingSale,       setEditingSale]       = useState(null);
@@ -332,12 +339,12 @@ export default function BazaarPOS({ userRole = 'admin', userStore = null }) {
 
   // ── Load past events ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (isEmployee) return;
-    fetch(`${API}/api/bazaar/events`, { headers: { Authorization: `Bearer ${token}` } })
+    if (isStorePos) return;
+    fetch(`${API}/api/bazaar/events?location=${encodeURIComponent(storeLocation)}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => setPastEvents(Array.isArray(d) ? d : []))
       .catch(console.error);
-  }, [token, isEmployee]);
+  }, [token, isStorePos, storeLocation]);
 
   // ── Load sales ────────────────────────────────────────────────────────────
   const fetchSales = useCallback(async () => {
@@ -347,17 +354,19 @@ export default function BazaarPOS({ userRole = 'admin', userStore = null }) {
       if (filterDay    !== 'All') params.push(`day=${encodeURIComponent(filterDay)}`);
       if (filterEvent  !== 'All') params.push(`eventId=${encodeURIComponent(filterEvent)}`);
       if (filterStatus !== 'All') params.push(`status=${filterStatus}`);
+      params.push(`location=${encodeURIComponent(storeLocation)}`);
       const url = `${API}/api/bazaar${params.length ? '?' + params.join('&') : ''}`;
       const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       const data = await r.json().catch(() => []);
       if (!r.ok) throw new Error(data.message || 'Failed to load sales');
       setSales(Array.isArray(data) ? data : []);
+      setSalesError('');
     } catch (e) {
       console.error(e);
-      setSales([]);
+      setSalesError('Could not refresh sales. Your previously loaded sales are still shown; please try Refresh again.');
     }
     finally { setLoadingSales(false); }
-  }, [filterDay, filterEvent, filterStatus, token]);
+  }, [filterDay, filterEvent, filterStatus, storeLocation, token]);
 
   useEffect(() => { fetchSales(); }, [fetchSales]);
 
@@ -444,16 +453,16 @@ export default function BazaarPOS({ userRole = 'admin', userStore = null }) {
   // ── Complete sale ─────────────────────────────────────────────────────────
   const completeSale = async () => {
     if (cart.length === 0) return;
-    if (!isEmployee && !eventId) { alert('Please set up your event first.'); setShowEventSetup(true); return; }
+    if (!isStorePos && !eventId) { alert('Please set up your event first.'); setShowEventSetup(true); return; }
     setSaving(true); setSaveMsg('');
     try {
       const res  = await fetch(`${API}/api/bazaar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          eventId:       isEmployee ? `${storeLocation}_daily` : eventId,
-          eventName:     isEmployee ? (storeLocation === 'sabeel' ? 'Sabeel Store' : 'Clouds Tex Store') : eventName,
-          eventLocation: isEmployee ? '' : eventLocation,
+          eventId:       isStorePos ? `${storeLocation}_daily` : eventId,
+          eventName:     isStorePos ? locationLabel : eventName,
+          eventLocation: isStorePos ? locationLabel : eventLocation,
           customerName:  customer.name  || 'Walk-in',
           customerPhone: customer.phone,
           items: cart.map(i => ({
@@ -463,7 +472,7 @@ export default function BazaarPOS({ userRole = 'admin', userStore = null }) {
           })),
           orderDiscount: discountAmount, discountPct, paymentMethod,
           note:      orderNote,
-          bazaarDay: isEmployee ? new Date().toISOString().split('T')[0] : currentDay,
+          bazaarDay: isStorePos ? new Date().toISOString().split('T')[0] : currentDay,
           location:  storeLocation,
         }),
       });
@@ -664,7 +673,7 @@ export default function BazaarPOS({ userRole = 'admin', userStore = null }) {
   // ─────────────────────────────────────────────────────────────────────────
   // EVENT SETUP SCREEN
   // ─────────────────────────────────────────────────────────────────────────
-  if (!isEmployee && showEventSetup) {
+  if (!isStorePos && showEventSetup) {
     return (
       <div style={{ fontFamily: 'Montserrat, sans-serif', maxWidth: 540, margin: '0 auto', paddingTop: 20 }}>
         <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '2rem', color: DARK, marginBottom: 4 }}>
@@ -710,7 +719,7 @@ export default function BazaarPOS({ userRole = 'admin', userStore = null }) {
     );
   }
 
-  const displayDates = isEmployee ? [new Date().toISOString().split('T')[0]] : eventDates;
+  const displayDates = isStorePos ? [new Date().toISOString().split('T')[0]] : eventDates;
 
   // ─────────────────────────────────────────────────────────────────────────
   // MAIN POS SCREEN
@@ -722,15 +731,15 @@ export default function BazaarPOS({ userRole = 'admin', userStore = null }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '2rem', fontWeight: 700, margin: 0, color: DARK }}>
-            {isEmployee ? (storeLocation === 'sabeel' ? '🏪 Sabeel Elrashad POS' : '☁️ Clouds Tex POS') : `🎪 ${eventName}`}
+            {isStorePos ? (storeLocation === 'sabeel' ? '🏪 Sabeel Elrashad POS' : '☁️ Clouds Tex POS') : `🎪 ${eventName}`}
           </h1>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
-            {!isEmployee && eventLocation && (
+            {!isStorePos && eventLocation && (
               <span style={{ fontSize: 12, color: MID, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <MapPin style={{ width: 12 }} /> {eventLocation}
               </span>
             )}
-            {!isEmployee && (
+            {!isStorePos && (
               <button onClick={() => setShowEventSetup(true)} style={{
                 fontSize: 11, color: ROSE, background: 'none', border: 'none',
                 cursor: 'pointer', textDecoration: 'underline', fontFamily: 'Montserrat, sans-serif',
@@ -768,7 +777,7 @@ export default function BazaarPOS({ userRole = 'admin', userStore = null }) {
             background: currentDay === d ? ROSE : '#fff',
             color: currentDay === d ? '#fff' : DARK,
             fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'Montserrat, sans-serif',
-          }}>{isEmployee ? d : new Date(d + 'T12:00:00').toLocaleDateString('en-EG', { day: 'numeric', month: 'short' })}</button>
+          }}>{isStorePos ? d : new Date(d + 'T12:00:00').toLocaleDateString('en-EG', { day: 'numeric', month: 'short' })}</button>
         ))}
       </div>
 
@@ -963,7 +972,7 @@ export default function BazaarPOS({ userRole = 'admin', userStore = null }) {
         <div>
           {/* Day cards — excluding voided from totals */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 20 }}>
-            {['All', ...(isEmployee ? [new Date().toISOString().split('T')[0]] : eventDates)].map(d => {
+            {['All', ...(isStorePos ? [new Date().toISOString().split('T')[0]] : eventDates)].map(d => {
               const selected = filterDay === d;
               return (
                 <div key={d} onClick={() => setFilterDay(d)} style={{
@@ -972,7 +981,7 @@ export default function BazaarPOS({ userRole = 'admin', userStore = null }) {
                   border: `2px solid ${selected ? ROSE : CREAM}`, cursor: 'pointer',
                 }}>
                   <p style={{ fontSize: 10, color: MID, margin: '0 0 4px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                    {d === 'All' ? 'All Days' : isEmployee ? d : new Date(d + 'T12:00:00').toLocaleDateString('en-EG', { day: 'numeric', month: 'short' })}
+                    {d === 'All' ? 'All Days' : isStorePos ? d : new Date(d + 'T12:00:00').toLocaleDateString('en-EG', { day: 'numeric', month: 'short' })}
                   </p>
                   <p style={{ fontSize: 18, fontWeight: 800, margin: '0 0 2px', color: ROSE }}>{fmt(dayRevenue(d))}</p>
                   <p style={{ fontSize: 10, color: MID, margin: '0 0 6px' }}>{dayCount(d)} sales (excl. voided)</p>
@@ -987,7 +996,7 @@ export default function BazaarPOS({ userRole = 'admin', userStore = null }) {
 
           {/* Filters row */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-            {!isEmployee && pastEvents.length > 0 && (
+            {!isStorePos && pastEvents.length > 0 && (
               <select value={filterEvent} onChange={e => setFilterEvent(e.target.value)} style={{ ...inp, width: 'auto', padding: '7px 12px', fontSize: 12 }}>
                 <option value="All">All Events</option>
                 {pastEvents.map(ev => <option key={ev._id} value={ev._id}>{ev.eventName}</option>)}
@@ -1007,6 +1016,12 @@ export default function BazaarPOS({ userRole = 'admin', userStore = null }) {
               <Download style={{ width: 13 }} /> Export CSV
             </button>
           </div>
+
+          {salesError && (
+            <p style={{ margin: '0 0 14px', padding: '10px 12px', borderRadius: 8, background: '#fff7ed', color: '#9a3412', fontSize: 12, fontWeight: 600 }}>
+              {salesError}
+            </p>
+          )}
 
           {loadingSales ? (
             <p style={{ textAlign: 'center', color: MID, padding: 40, fontStyle: 'italic' }}>Loading sales...</p>

@@ -42,6 +42,7 @@ const ALL_NAV = [
   { id: 'content',    name: 'Content Planner', icon: Calendar },
   { id: 'employees',  name: 'Employees',   icon: Users       },
   { id: 'bazaar',     name: 'Bazaar',      icon: ShoppingBag },
+  { id: 'clouds-pos', name: 'Clouds Tex POS', icon: ShoppingBag },
   { id: 'stock',      name: 'Stock',       icon: Layers      },
 ];
 
@@ -401,7 +402,8 @@ const AdminDashboard = () => {
       case 'reviews':    return <ReviewManager />;
       case 'content':    return <ContentPlanner />;
       case 'employees':  return <EmployeeManager />;
-      case 'bazaar':     return <BazaarPOS userRole={userRole} userStore={userStore} />;
+      case 'bazaar':     return <BazaarPOS userRole={userRole} userStore={userStore} locationScope="bazaar" />;
+      case 'clouds-pos': return <BazaarPOS userRole={userRole} userStore={userStore} locationScope="clouds_tex" />;
       case 'stock':      return (
         <StockManager
           readOnly={userRole !== 'admin'}

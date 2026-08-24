@@ -4,6 +4,7 @@ import { Plus, Edit, Trash2, Save, X, RefreshCw } from 'lucide-react';
 const API_BASE_URL = 'https://siraj-backend.onrender.com';
 
 const ShippingManager = () => {
+    const token = localStorage.getItem('adminToken');
     const [shippingRates, setShippingRates] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,7 +44,10 @@ const ShippingManager = () => {
         try {
             const response = await fetch(`${API_BASE_URL}/api/shipping-rates`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     city: newRate.city.trim(),
                     shippingFee: parseFloat(newRate.shippingFee)
@@ -70,7 +74,10 @@ const ShippingManager = () => {
         try {
             const response = await fetch(`${API_BASE_URL}/api/shipping-rates/${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify(updates)
             });
 
@@ -95,7 +102,8 @@ const ShippingManager = () => {
         setIsSubmitting(true);
         try {
             const response = await fetch(`${API_BASE_URL}/api/shipping-rates/${id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
             });
 
             if (response.ok) {

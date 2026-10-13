@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Package, ShoppingCart, Truck, Tag, Grid,
@@ -11,6 +10,7 @@ import ShippingManager  from './pages/ShippingManager';
 import DiscountManager  from './pages/DiscountManager';
 import CategoryManager  from './pages/CategoryManager';
 import HomepageManager  from './pages/HomepageManager';
+import LandingPageManager from './pages/LandingPageManager';
 import Analytics        from './pages/Analytics';
 import ReviewManager    from './pages/ReviewManager';
 import BazaarPOS        from './pages/BazaarPOS';
@@ -38,11 +38,13 @@ const ALL_NAV = [
   { id: 'discounts',  name: 'Discounts',   icon: Tag         },
   { id: 'shipping',   name: 'Shipping',    icon: Truck       },
   { id: 'homepage',   name: 'Homepage',    icon: Image       },
+  { id: 'landing',    name: 'Landing Pages', icon: Layers    },
   { id: 'reviews',    name: 'Reviews',     icon: Star        },
   { id: 'content',    name: 'Content Planner', icon: Calendar },
   { id: 'employees',  name: 'Employees',   icon: Users       },
-  { id: 'bazaar',     name: 'Bazaar',      icon: ShoppingBag },
-  { id: 'sabeel-pos', name: 'Sabeel POS',     icon: ShoppingBag },
+  { id: 'bazaar',        name: 'Bazaar',           icon: ShoppingBag },
+  { id: 'sabeel-pos',    name: 'Sabeel POS',       icon: ShoppingBag },
+  { id: 'cloudstex-pos', name: 'Clouds Tex POS',   icon: ShoppingBag },
   { id: 'stock',      name: 'Stock',       icon: Layers      },
 ];
 
@@ -399,11 +401,13 @@ const AdminDashboard = () => {
       case 'discounts':  return <DiscountManager />;
       case 'categories': return <CategoryManager />;
       case 'homepage':   return <HomepageManager />;
+      case 'landing':    return <LandingPageManager />;
       case 'reviews':    return <ReviewManager />;
       case 'content':    return <ContentPlanner />;
       case 'employees':  return <EmployeeManager />;
       case 'bazaar':     return <BazaarPOS userRole={userRole} userStore={userStore} locationScope="bazaar" />;
       case 'sabeel-pos': return <BazaarPOS userRole={userRole} userStore={userStore} locationScope="sabeel" />;
+      case 'cloudstex-pos': return <BazaarPOS userRole={userRole} userStore={userStore} locationScope="clouds_tex" />;
       case 'stock':      return (
         <StockManager
           readOnly={userRole !== 'admin'}

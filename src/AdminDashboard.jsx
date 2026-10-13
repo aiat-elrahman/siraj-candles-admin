@@ -10,6 +10,7 @@ import ShippingManager  from './pages/ShippingManager';
 import DiscountManager  from './pages/DiscountManager';
 import CategoryManager  from './pages/CategoryManager';
 import HomepageManager  from './pages/HomepageManager';
+import StoreSettingsManager from './pages/StoreSettingsManager';
 import LandingPageManager from './pages/LandingPageManager';
 import Analytics        from './pages/Analytics';
 import ReviewManager    from './pages/ReviewManager';
@@ -38,6 +39,7 @@ const ALL_NAV = [
   { id: 'discounts',  name: 'Discounts',   icon: Tag         },
   { id: 'shipping',   name: 'Shipping',    icon: Truck       },
   { id: 'homepage',   name: 'Homepage',    icon: Image       },
+  { id: 'store-settings', name: 'Store Settings', icon: Tag    },
   { id: 'landing',    name: 'Landing Pages', icon: Layers    },
   { id: 'reviews',    name: 'Reviews',     icon: Star        },
   { id: 'content',    name: 'Content Planner', icon: Calendar },
@@ -401,6 +403,7 @@ const AdminDashboard = () => {
       case 'discounts':  return <DiscountManager />;
       case 'categories': return <CategoryManager />;
       case 'homepage':   return <HomepageManager />;
+      case 'store-settings': return <StoreSettingsManager />;
       case 'landing':    return <LandingPageManager />;
       case 'reviews':    return <ReviewManager />;
       case 'content':    return <ContentPlanner />;
